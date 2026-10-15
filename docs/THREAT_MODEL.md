@@ -39,6 +39,9 @@ Every attack test links back to a row ID here. Update this file before code.
 | T9 | Smuggle surveillance data through event fields | any | privacy | Yes | Schema allow-list rejects unknown types and keys |
 | T10 | Malformed or hostile input at ingest | X3 | all | Yes | Size and depth limits, strict parse, no float, no dup keys |
 | T11 | Benign fault read as an accusation | X5 | A5 | n/a | Benign faults yield NOTES, never TAMPER_SUSPECTED |
+| T12 | Disk acknowledges fsync but loses the data (write-cache lie, VM layer) | X5 | A2 | Detected, not prevented | Shows up as a recovered chain shorter than a witness-held head. State the fsync-honesty assumption. |
+| T13 | Restore-on-reboot wipes the WAL | X2 X5 | A2 | Yes | `WalMissing` on a seat that already had a session. Persistent evidence volume required. |
+
 
 ## Evidence assurance levels
 - **A0** self-consistent only. Proves little against a root attacker.

@@ -52,3 +52,22 @@ empty = `H(merkle.empty, "")`. Proofs are bottom-up sibling lists.
 ## 6. Verification result
 `verify_batch` returns a list of coded findings. An **empty list means
 self-consistent (A0), not verified.** Only an outside anchor upgrades that.
+
+## 7. Write-ahead log
+Frame: `"CW" || len u32be || payload || crc32 u32be`, crc over `len || payload`,
+payload = canonical event JSON (max 64 KiB). The hash chain is the integrity;
+the CRC only makes torn writes recognisable.
+
+Torn-tail rule: scan from byte 0, accept whole records with a good CRC. The first
+rejected record is a TORN TAIL (truncate, emit RECOVERY) if it is a stub shorter
+than a header, runs past EOF, is a zero-filled tail, or is CRC-bad and ends
+exactly at EOF. Anything else (bad magic with data, CRC-bad with bytes after it,
+a valid record that breaks the chain) is CORRUPT: recovery refuses, a human
+decides.
+
+Recovery appends a RECOVERY event `{last_good_seq, discarded_bytes}` to the
+chain, sealed into a batch immediately. A reopen of an empty log emits nothing.
+
+Acknowledged = fsynced. Only events at or below `durable_seq` may be sealed or
+shown to a witness. Any write or fsync error fail-stops the log until recovery.
+
