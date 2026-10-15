@@ -1,6 +1,6 @@
 """Check a student receipt. Offline: needs only the receipt and the pinned roster.
 
-  python tools/validate_receipt.py --roster roster.json --assessor-pub <pub> "IMR1...."
+  python tools/validate_receipt.py --roster roster.json --assessor-pub <pub> "IMR1....|IMR2...."
   python tools/validate_receipt.py --roster roster.json --assessor-pub <pub> -f slip.txt \
          --evidence ./evidence-copy
 
@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from immutable import receipt
+from immutable import receipt, final_receipt
 from immutable.roster import Roster, RosterError
 
 
@@ -25,7 +25,7 @@ def main() -> int:
                     help="evidence copied off the workstation; repeatable")
     ap.add_argument("-f", "--file", help="a saved receipt slip (the IMR1 text must be last)")
     ap.add_argument("--json", action="store_true")
-    ap.add_argument("token", nargs="?", help="the IMR1. text, or - for stdin")
+    ap.add_argument("token", nargs="?", help="the IMR1. or IMR2. text, or - for stdin")
     a = ap.parse_args()
     try:
         roster = Roster.parse(Path(a.roster).read_bytes(), trusted_assessor=a.assessor_pub)
@@ -39,6 +39,20 @@ def main() -> int:
     else:
         text = sys.stdin.read()
 
+    if "IMR2." in text:
+        manifests = []
+        for item in a.evidence:
+            p = Path(item)
+            manifests += [x.read_bytes() for x in p.rglob("manifest.json")] if p.is_dir() else []
+        res = final_receipt.validate(text, roster, manifests=manifests)
+        if a.json:
+            print(json.dumps(res.to_dict(), indent=2))
+        else:
+            for c in res.checks:
+                tag = "ok  " if c.ok else ("FAIL" if c.required else "note")
+                print(f"  [{tag}] {c.text}")
+            print("\n" + ("RECEIPT VALID" if res.valid else "RECEIPT NOT VALID"))
+        return 0 if res.valid else 1
     res = receipt.validate(text, roster, evidence=a.evidence)
     if a.json:
         print(json.dumps(res.to_dict(), indent=2))

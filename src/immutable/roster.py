@@ -31,7 +31,8 @@ MAX_SEATS = 2000
 MAX_WITNESSES = 16
 MAX_ROSTER_BYTES = 2 << 20
 
-_BODY = ("v", "exam_id", "issued_ms", "paper_sha256", "assessor", "seats", "witnesses")
+_BODY_V1 = ("v", "exam_id", "issued_ms", "paper_sha256", "assessor", "seats", "witnesses")
+_BODY_V2 = _BODY_V1 + ("servers",)
 
 
 class RosterError(ValueError):
@@ -51,6 +52,12 @@ class Witness:
     pub: str
 
 
+@dataclass(frozen=True)
+class Server:
+    server_id: str
+    pub: str
+
+
 def _ident(x: object) -> bool:
     return isinstance(x, str) and bool(ID_RE.match(x))
 
@@ -59,10 +66,10 @@ def _uint(x: object) -> bool:
     return isinstance(x, int) and not isinstance(x, bool) and 0 <= x < 2**53
 
 
-def _validate(body: object) -> tuple[tuple[Seat, ...], tuple[Witness, ...]]:
-    if not isinstance(body, dict) or set(body) != set(_BODY):
-        raise RosterError("roster body must have exactly the v1 fields")
-    if body["v"] != 1 or not _uint(body["v"]):
+def _validate(body: object) -> tuple[tuple[Seat, ...], tuple[Witness, ...], tuple[Server, ...]]:
+    if not isinstance(body, dict) or body.get("v") not in (1, 2) or set(body) != set(_BODY_V1 if body.get("v") == 1 else _BODY_V2):
+        raise RosterError("roster body has unsupported fields or version")
+    if not _uint(body["v"]):
         raise RosterError("unsupported roster version")
     if not _ident(body["exam_id"]):
         raise RosterError("bad exam_id")
@@ -114,16 +121,31 @@ def _validate(body: object) -> tuple[tuple[Seat, ...], tuple[Witness, ...]]:
         if len(who) > 1:
             raise RosterError(f"one key is used by several roles ({', '.join(who)}); "
                               f"key id {keys.key_id(pub)[:16]}")
-    return tuple(seats), tuple(wits)
+    servers: list[Server] = []
+    for s in body.get("servers", []):
+        if not isinstance(s, dict) or set(s) != {"server_id", "pub"} \
+                or not _ident(s["server_id"]) or not hashing.is_hex(s["pub"], 64):
+            raise RosterError("bad server entry")
+        servers.append(Server(s["server_id"], s["pub"]))
+    sids = [s.server_id for s in servers]
+    if sids != sorted(sids) or len(set(sids)) != len(sids):
+        raise RosterError("servers must be sorted by id with no duplicates")
+    for s in servers:
+        owners[s.pub].append(f"server {s.server_id}")
+    for pub, who in owners.items():
+        if len(who) > 1:
+            raise RosterError(f"one key is used by several roles ({', '.join(who)}); key id {keys.key_id(pub)[:16]}")
+    return tuple(seats), tuple(wits), tuple(servers)
 
 
 class Roster:
     def __init__(self, body: dict, sig: str, raw: bytes):
         self.body, self.sig, self.raw = body, sig, raw
-        self.seats, self.witnesses = _validate(body)
+        self.seats, self.witnesses, self.servers = _validate(body)
         self._by_ws = {s.ws_id: s for s in self.seats}
         self._by_pub = {s.pub: s for s in self.seats}
         self._wit = {w.witness_id: w for w in self.witnesses}
+        self._servers = {s.server_id: s for s in self.servers}
 
     # -- identity of the roster itself
     @property
@@ -160,13 +182,16 @@ class Roster:
     def witness_by_pub(self, pub: str) -> Witness | None:
         return next((w for w in self.witnesses if w.pub == pub), None)
 
+    def server(self, server_id: str) -> Server | None:
+        return self._servers.get(server_id)
+
     # -- construction
     @classmethod
     def build(cls, assessor: keys.Signer, *, exam_id: str, paper_sha256: str,
-              seats: list[Seat], witnesses: list[Witness] | tuple = (),
+              seats: list[Seat], witnesses: list[Witness] | tuple = (), servers: list[Server] | tuple | None = None,
               issued_ms: int | None = None) -> "Roster":
         body = {
-            "v": 1, "exam_id": exam_id,
+            "v": 2 if servers is not None else 1, "exam_id": exam_id,
             "issued_ms": time.time_ns() // 1_000_000 if issued_ms is None else issued_ms,
             "paper_sha256": paper_sha256, "assessor": assessor.pub_hex,
             "seats": [{"ws_id": s.ws_id, "pub": s.pub, "candidate": s.candidate}
@@ -174,6 +199,9 @@ class Roster:
             "witnesses": [{"witness_id": w.witness_id, "pub": w.pub}
                           for w in sorted(witnesses, key=lambda w: w.witness_id)],
         }
+        if servers is not None:
+            body["servers"] = [{"server_id": s.server_id, "pub": s.pub}
+                               for s in sorted(servers, key=lambda s: s.server_id)]
         _validate(body)
         sig = assessor.sign(hashing.ROSTER, canon.dumps(body))
         raw = canon.dumps({"body": body, "sig": sig})

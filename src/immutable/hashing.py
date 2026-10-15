@@ -13,7 +13,7 @@ ZERO = "0" * 64                      # genesis prev
 
 DOMAINS = frozenset({
     "event", "batch", "merkle.leaf", "merkle.node", "merkle.empty",
-    "key", "checkpoint", "roster", "receipt", "cosign", "transfer", "enroll", "ping",
+    "key", "checkpoint", "roster", "receipt", "cosign", "transfer", "enroll", "ping", "final",
 })
 
 EVENT, BATCH, KEY = "event", "batch", "key"
@@ -21,6 +21,7 @@ CHECKPOINT, ROSTER, RECEIPT = "checkpoint", "roster", "receipt"
 COSIGN, TRANSFER = "cosign", "transfer"
 ENROLL = "enroll"
 PING = "ping"
+FINAL = "final"
 
 
 

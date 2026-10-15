@@ -210,6 +210,11 @@ class Store:
                 counts[f"{r[0]}:{r[1].status}"] += 1
         return dict(sorted(counts.items()))
 
+    def ingest_v2_export(self, path: str | Path) -> dict:
+        """Import a server export without changing current verifier semantics."""
+        from .v2_export import ingest
+        return ingest(self, path)
+
     # ---- the case
     def case(self, policy: ClockPolicy = ClockPolicy()) -> Case:
         with self._lock:

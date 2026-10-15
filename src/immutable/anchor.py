@@ -121,6 +121,9 @@ def authenticate(a: Anchor, roster: Roster, seat_pub: str | None = None) -> str 
     data = canon.dumps(a.body())
     if a.kind == "witness":
         w = roster.witness(a.holder)
+        # v2 server acknowledgements intentionally reuse the witness anchor format,
+        # so the existing verifier can treat either outside holder as an A1 source.
+        w = w or roster.server(a.holder)
         if w is None:
             return "the witness is not on the roster"
         return None if keys.verify(hashing.COSIGN, w.pub, data, a.sig) else "witness signature does not verify"
