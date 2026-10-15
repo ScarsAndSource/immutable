@@ -31,7 +31,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
+from . import anchor as anchor_mod
 from . import canon, hashing, merkle, transfer
+from . import receipt as receipt_mod
 from .batch import Batch, seal
 from .events import Event
 from .fsys import FS, RealFS
@@ -62,6 +64,7 @@ class SubmitResult:
     last_seq: int
     head: str
     skipped: list[str]
+    receipt: bytes | None = None
 
 
 def _atomic_write(path: Path, data: bytes) -> None:
@@ -280,8 +283,14 @@ class Agent:
             self.flush()
             self._ended = True
             self._wal.close()
+            raw = receipt_mod.issue(
+                self._signer, exam_id=self._wal._w.exam_id, session_id=self._wal._w.session_id,
+                ws_id=self._wal._w.ws_id, last_seq=last.seq, head=last.hash())
+            rdir = self.evidence / "receipt"
+            rdir.mkdir(parents=True, exist_ok=True, mode=0o700)
+            _atomic_write(rdir / f"{anchor_mod.parse(raw).id}.anchor.json", raw)
             return SubmitResult(msha, len(listing.files), last.seq, last.hash(),
-                                listing.skipped)
+                                listing.skipped, raw)
 
     # --------------------------------------------------------------- outbox
     def _scan_outbox(self) -> int:

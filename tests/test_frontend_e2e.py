@@ -86,15 +86,15 @@ def test_full_pipeline_e2e():
             with urllib.request.urlopen(req, timeout=5) as r:
                 assert r.status == 200
                 receipt = json.loads(r.read())
-                assert receipt["folio_number"] == "8821"
-                assert receipt["chain_status"] == "Chain Intact"
-                assert "CNTR::" in receipt["digest_raw"]
+                assert receipt["token"].startswith("IMR1.")
+                assert receipt["standing"]["code"] != "UNKNOWN"
 
             # 8. Check receipt retrieval
             with urllib.request.urlopen(f"{base}/api/student/receipt", timeout=5) as r:
                 assert r.status == 200
                 rec_check = json.loads(r.read())
-                assert rec_check["folio_number"] == "8821"
+                assert rec_check["token"].startswith("IMR1.")
+                assert rec_check["standing"]["code"] != "UNKNOWN"
 
             # 9. Assessor audit case verification
             with urllib.request.urlopen(f"{base}/api/assessor/case", timeout=5) as r:

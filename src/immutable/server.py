@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from . import canon, hashing, keys
+from . import anchor as anchor_mod, canon, hashing, keys, receipt as receipt_mod
 from .agent import Agent, AgentError
 from .clockcheck import ClockPolicy
 from .courier import Courier
@@ -204,6 +204,14 @@ class ImmutableService:
             if anchors_dir.exists():
                 anchors_count = len(list(anchors_dir.glob("*.anchor.json")))
 
+            chain_intact = False
+            if self.agent and self.agent._wal.events:
+                evs = self.agent._wal.events
+                chain_intact = all(
+                    evs[i].prev == evs[i - 1].hash() and evs[i].seq == evs[i - 1].seq + 1
+                    for i in range(1, len(evs))
+                )
+
             return {
                 "exam_id": self.exam_id,
                 "session_id": self.session_id,
@@ -222,7 +230,7 @@ class ImmutableService:
                     "pending": courier_status.get("pending", 0),
                     "unreachable_s": self.courier.unreachable_s() if self.courier else 0,
                     "last_error": courier_status.get("last_error"),
-                    "chain_intact": True,
+                    "chain_intact": chain_intact,
                 },
                 "receipt": self.last_receipt,
             }
@@ -300,38 +308,28 @@ class ImmutableService:
             # Ingest into assessor store
             self.store.ingest_path(self.evidence_dir)
 
-            # Count anchors
-            anchors_dir = self.evidence_dir / "anchors"
-            anchors_count = len(list(anchors_dir.glob("*.anchor.json"))) if anchors_dir.exists() else 0
-
-            # Construct official Archival Receipt
-            ts = time.strftime("%d %b %Y • %H:%M:%S IST")
-            digest_raw = (
-                f"CNTR::EXAM:{self.exam_id}::SESSION:{self.session_id}::STN:{self.ws_id}::"
-                f"TS:{int(time.time())}::EVENTS:{sub_res.last_seq + 1}::"
-                f"MANIFEST:{sub_res.manifest_sha256}::HEAD:{sub_res.head}::"
-                f"WITNESS:W01::CHAIN:VERIFIED"
-            )
-
+            a = anchor_mod.parse(sub_res.receipt)
+            token = receipt_mod.encode(sub_res.receipt)
+            case = self.store.case(ClockPolicy())
             receipt = {
-                "folio_number": "8821",
-                "exam_id": self.exam_id,
-                "session_id": self.session_id,
-                "station_seat": f"LAB-04 // {self.ws_id}",
-                "session_code": f"CNTR-{self.session_id}-{self.ws_id}",
-                "submitted_at": ts,
-                "manifest_sha256": sub_res.manifest_sha256,
-                "file_count": sub_res.file_count,
-                "last_seq": sub_res.last_seq,
-                "head": sub_res.head,
-                "cosignatures": f"{anchors_count} of {anchors_count}",
-                "witness_name": "Examiner #02 (Delhi Vault Witness)",
-                "chain_status": "Chain Intact",
-                "digest_raw": digest_raw,
+                "kind": "immutable-receipt/1",
+                "receipt_id": a.id[:16],
+                "exam_id": self.exam_id, "session_id": self.session_id,
+                "ws_id": self.ws_id, "candidate": self.candidate,
+                "last_seq": sub_res.last_seq, "events": sub_res.last_seq + 1,
+                "head": sub_res.head, "head_groups": receipt_mod.groups(sub_res.head),
+                "signed_at": receipt_mod.utc(a.seen_ms),
+                "manifest_sha256": sub_res.manifest_sha256, "file_count": sub_res.file_count,
                 "skipped_files": sub_res.skipped,
+                "token": token, "qr_svg": receipt_mod.qr_svg(token),
+                "standing": receipt_mod.standing(case.body, a),
             }
             self.last_receipt = receipt
             return receipt
+
+    def check_receipt(self, token: str) -> dict[str, Any]:
+        with self.lock:
+            return receipt_mod.validate(token, self.roster, evidence=[self.evidence_dir]).to_dict()
 
     def get_assessor_case(self) -> dict[str, Any]:
         with self.lock:
@@ -541,6 +539,10 @@ class WebHandler(BaseHTTPRequestHandler):
             if path == "/api/student/submit":
                 receipt = service.submit()
                 self._json(200, receipt)
+                return
+
+            if path == "/api/receipt/check":
+                self._json(200, service.check_receipt(str(payload.get("token", ""))))
                 return
 
             if path == "/api/tamperlab/run":

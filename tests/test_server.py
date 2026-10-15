@@ -44,9 +44,8 @@ def test_service_lifecycle():
 
             # Test submit
             sub_res = service.submit()
-            assert sub_res["folio_number"] == "8821"
-            assert sub_res["chain_status"] == "Chain Intact"
-            assert "CNTR::" in sub_res["digest_raw"]
+            assert sub_res["token"].startswith("IMR1.")
+            assert sub_res["standing"]["code"] != "UNKNOWN"
 
             # Test assessor case
             case = service.get_assessor_case()

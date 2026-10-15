@@ -59,6 +59,8 @@ Every attack test links back to a row ID here. Update this file before code.
 - **A1** an outside holder saw checkpoints up to seq N. Everything after N is the unanchored tail.
 - **A2** A1 plus the student receipt matches the final head. The tail is closed.
 
+A receipt forged by a root user is caught only by an outside anchor or the assessor’s copy of the log. That is the reason A2 needs both.
+
 ## Out of scope, stated openly
 Remote-solver cheating, assessor key compromise before the exam, student and
 witness-operator collusion, hardware keyloggers, legal admissibility, any

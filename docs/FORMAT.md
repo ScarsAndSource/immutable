@@ -137,3 +137,9 @@ evidence), witness.db. The assessor ingests both folders.
 CLOCK_DRIFT is a per-boot sum of wall-vs-uptime discrepancies below the step threshold, in
 ppm. All clock findings except CLOCK_BACKWARD and BOOT_REVISIT are notes. The policy is part
 of the case file, so changing it changes the case hash on purpose.
+
+## 14. Receipt
+Receipt text is IMR1. plus base64url (no padding) of the canonical receipt anchor file, with the same signature rules as §10.
+A validator must reject non-canonical or damaged text, and must say that offline validity shows a signature and nothing more.
+Seats made by transfer are checked only through full evidence in v1.
+
