@@ -1,0 +1,96 @@
+{
+  "spec": "FORMAT_V2",
+  "test_key": {
+    "note": "public test key, never use in production; used as assessor and as server in these vectors",
+    "seed_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "pub_hex": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8"
+  },
+  "canon": [
+    {
+      "id": "C1_basic",
+      "value": {"b": 1, "a": "x", "c": [true, null, false]},
+      "canonical": "{\"a\":\"x\",\"b\":1,\"c\":[true,null,false]}",
+      "sha256": "f84a9b3f8cfe9fcba619a5ee2e0845d2baaad7b9b210649a812f9d2ba52934fb"
+    },
+    {
+      "id": "C2_unicode_values",
+      "value": {"name": "café 😀", "k": "中文"},
+      "note": "values are raw UTF-8, never \\u-escaped; strings must be NFC",
+      "sha256": "ca71bda0571b840b4099cb1b2ef36114fc231acdd392aa15566b19137d98c208"
+    },
+    {
+      "id": "C3_control_escapes",
+      "value": {"s": "a\"b\\c\n\r\t\b\f\u0001\u001f\u007f"},
+      "note": "short escapes for \" \\ \n \r \t \b \f, lowercase \\u00xx for other controls below 0x20, DEL (0x7f) written raw",
+      "sha256": "0b8068367367317a11071f297459c10b5f7d7fdd5f4de75751803f8d7093ffe3"
+    },
+    {
+      "id": "C4_astral_key_order",
+      "value": {"\uff5e": 1, "\ud83d\ude00": 2, "a": 3},
+      "v1_code_point_order": {
+        "order": ["a", "U+FF5E", "U+1F600"],
+        "sha256": "16580ab8f40757326c0e99a20183717061f50649ebe20668f2cc441ad48bf2e4"
+      },
+      "rfc8785_utf16_order": {
+        "order": ["a", "U+1F600", "U+FF5E"],
+        "sha256": "a7915368a7154745dc7e6e4b7c6460cedd96f84c6b71163388efebfe0d285868"
+      },
+      "note": "the two orders differ; this is why v2 server documents allow ASCII keys only"
+    }
+  ],
+  "files": [
+    {"id": "F1_lf",    "bytes_utf8": "print(1)\n",   "sha256": "cc42155088fca5730758db72b2a5bca33112a941dfaa2d43098ec422ce4ea213"},
+    {"id": "F2_crlf",  "bytes_utf8": "print(1)\r\n", "sha256": "f1776ce4397fa7cbeaee31c3ff73d5b829eb49e5d15049f9266f099743f377e2"},
+    {"id": "F3_empty", "bytes_utf8": "",             "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}
+  ],
+  "manifest": {
+    "id": "M1",
+    "value": {
+      "v": 1, "exam_id": "EX1", "session_id": "S0001", "ws_id": "ws-01",
+      "files": [
+        {"path": "main.py", "sha256": "f1776ce4397fa7cbeaee31c3ff73d5b829eb49e5d15049f9266f099743f377e2", "size": 10},
+        {"path": "util/helpers.py", "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "size": 0}
+      ]
+    },
+    "canonical": "{\"exam_id\":\"EX1\",\"files\":[{\"path\":\"main.py\",\"sha256\":\"f1776ce4397fa7cbeaee31c3ff73d5b829eb49e5d15049f9266f099743f377e2\",\"size\":10},{\"path\":\"util/helpers.py\",\"sha256\":\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\"size\":0}],\"session_id\":\"S0001\",\"v\":1,\"ws_id\":\"ws-01\"}",
+    "sha256": "53e5ab164319437fe7fae3e4f1190d22493343dfac58d7d0b32a16cf74837913"
+  },
+  "examconf": {
+    "id": "E1",
+    "body": {
+      "v": 2, "exam_id": "EX1", "rev": 1,
+      "start_ms": 1789990000000, "end_ms": 1790000800000,
+      "connect_open_ms": 1789989100000, "connect_close_ms": 1789991800000,
+      "drain_ms": 30000, "heartbeat_ms": 5000, "outage_threshold_ms": 15000,
+      "outage_cap_ms": 120000, "outage_total_ms": 300000, "save_interval_ms": 2000,
+      "langs": ["c", "python"], "approved_builds": [],
+      "paper_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    },
+    "canonical_sha256": "e9b84b9a782421b6dce6431ac1bc665efafb6e39e8c4e8956b1cd730e2c81b37",
+    "tagged_hash_domain_examconf": "69ad91c06c6581f99b56496eb15365a7225633822ded6fc1644311264b27bc00",
+    "sig": "2500b681a7e4a707f4dd35bb667974945353bdd3c3b788239723b8f959c63c133e5cf0542dc94ebc93a1ac96324e238556065969c1794a092da16aa91fdd990c"
+  },
+  "final_receipt": {
+    "id": "R1",
+    "body": {
+      "v": 2, "kind": "final", "exam_id": "EX1", "session_id": "S0001", "ws_id": "ws-01",
+      "candidate": "C-0042", "final_seq": 212,
+      "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "manifest_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "file_count": 2, "submit_seq": 211, "reason": "submitted",
+      "finalized_ms": 1790000000000, "last_confirmed_ms": 1789999999000,
+      "outage_count": 1, "outage_total_ms": 42000,
+      "journal_head": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "roster_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "schedule_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "paper_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "server_id": "srv-1"
+    },
+    "canonical_sha256": "9d4ae50c507282fbe9e8c2d2b7633f063e09e36e0fec9645fa931d3e3cf06955",
+    "tagged_hash_domain_final": "957836a78e9298ef0a79e9792ba02b959047e6a862028cf98f889ac66d30f1e0",
+    "sig": "1b697cf5fe2086679697a26b47705d7f92655df7d04795855940cc384b1fed8ced64308104372b33abd3a7198d6c6c937f93af8cc600ceb25d6bd4f99896b00c",
+    "receipt_id_sha256_of_document_bytes": "e2cc4f6e71bdcf274f56bbc257b8e3e3d9b930e48ba692cb547886c4e7614389",
+    "token_prefix": "IMR2.",
+    "token_chars": 1240
+  }
+}
