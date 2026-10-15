@@ -1,0 +1,58 @@
+# Supabase project configuration
+# Fill in your project URL and anon key from the Supabase dashboard.
+# NEVER commit real keys to the repository — use environment variables in CI.
+
+[api]
+# Your project URL (e.g., https://xyzcompany.supabase.co)
+# Override: SUPABASE_URL
+project_id = "your-project-ref"
+
+[api.tls]
+enabled = true
+
+# ---------------------------------------------------------------------------
+# Edge Function environment variables
+# Set these in the Supabase dashboard → Project Settings → Edge Functions Secrets
+# or in .env.local for local `supabase functions serve` development.
+# ---------------------------------------------------------------------------
+# SUPABASE_URL              = "https://your-project-ref.supabase.co"
+# SUPABASE_SERVICE_ROLE_KEY = "eyJ..."   # service_role JWT, NOT the anon key
+# SERVER_SEED_HEX           = "64 hex chars of Ed25519 private seed"
+# SERVER_ID                 = "server-01"  # must match roster servers[] entry
+
+[db]
+# Local dev DB port
+port = 54322
+shadow_port = 54320
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+
+[auth]
+# We do not use Supabase Auth for workstations — everything is seat-key signed.
+# Auth is optional and may be used for the examiner console web login.
+enabled = true
+site_url = "http://localhost:54321"
+
+[functions.ingest]
+verify_jwt = false   # Workstations use Ed25519 seat-key auth, not JWTs
+
+[functions.heartbeat]
+verify_jwt = false
+
+[functions.finalize]
+verify_jwt = false
+
+[functions.sign]
+verify_jwt = false   # Assessor route: protected by Ed25519 signature verification
+
+[realtime]
+enabled = false       # Not used by this application
