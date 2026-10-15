@@ -29,8 +29,8 @@ def test_full_pipeline_e2e():
             with opener.open(f"{base}/", timeout=5) as r:
                 assert r.status == 200
                 html = r.read().decode("utf-8")
-                assert "Archival Examination Ledger" in html
-                assert "Before you begin" in html
+                assert "Immutable" in html
+                assert "view-briefing" in html
 
             # 2. Get active student session
             with opener.open(f"{base}/api/student/session", timeout=5) as r:

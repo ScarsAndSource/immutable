@@ -68,7 +68,7 @@ def test_http_api_endpoints():
                 assert r.status == 200
                 html = r.read().decode("utf-8")
                 assert "Immutable" in html
-                assert "Before you begin" in html
+                assert "view-briefing" in html
 
             # GET /api/status
             with opener.open(f"{base_url}/api/status", timeout=5) as r:
