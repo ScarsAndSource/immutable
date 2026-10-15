@@ -13,6 +13,7 @@ So the only thing allowed to talk to it is its own page, in the same browser ses
 from __future__ import annotations
 
 import hmac
+import os
 import secrets
 import threading
 import time
@@ -56,6 +57,7 @@ class Bucket:
 class Sec:
     token: str
     hosts: frozenset
+    public_hosts: frozenset = frozenset()   # bare hostnames served over https behind a proxy
     mode: str = "demo"
     buckets: dict = field(default_factory=dict)
 
@@ -66,9 +68,13 @@ class Sec:
         names = {"127.0.0.1", "localhost", "[::1]"}
         if host not in ("0.0.0.0", "::", ""):
             names.add(host)
-        return cls(secrets.token_urlsafe(32),
-                   frozenset(f"{n}:{port}" for n in names), mode,
-                   {p: Bucket(*v) for p, v in RATE_LIMITED.items()})
+        # Hosted deploy: IMMUTABLE_PUBLIC_HOST="my-app.onrender.com" (comma separated).
+        pub = frozenset(h.strip().lower() for h in
+                        os.environ.get("IMMUTABLE_PUBLIC_HOST", "").split(",") if h.strip())
+        return cls(token=secrets.token_urlsafe(32),
+                   hosts=frozenset(f"{n}:{port}" for n in names) | pub,
+                   public_hosts=pub, mode=mode,
+                   buckets={p: Bucket(*v) for p, v in RATE_LIMITED.items()})
 
 
 def _cookie_ok(header: str, token: str) -> bool:
@@ -93,7 +99,8 @@ def check(sec: Sec, method: str, path: str, headers) -> tuple[int, str, int] | N
     if site not in (None, "same-origin") and not (site == "none" and method == "GET"):
         return 403, "cross-site request refused", 0
     origin = headers.get("Origin")
-    if origin is not None and origin.lower() not in {"http://" + h for h in sec.hosts}:
+    ok_origins = {"http://" + h for h in sec.hosts} | {"https://" + h for h in sec.public_hosts}
+    if origin is not None and origin.lower() not in ok_origins:
         return 403, "cross-origin request refused", 0
     if method == "POST" and not (headers.get("Content-Type") or "").lower().startswith("application/json"):
         return 415, "JSON requests only", 0
@@ -108,7 +115,8 @@ def check(sec: Sec, method: str, path: str, headers) -> tuple[int, str, int] | N
 
 
 def session_cookie(token: str) -> str:
-    return f"{COOKIE}={token}; Path=/; HttpOnly; SameSite=Strict"
+    secure = "; Secure" if os.environ.get("IMMUTABLE_PUBLIC_HOST") else ""
+    return f"{COOKIE}={token}; Path=/; HttpOnly; SameSite=Strict{secure}"
 
 
 def security_headers(report_only: bool = False) -> dict[str, str]:

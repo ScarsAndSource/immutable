@@ -616,6 +616,9 @@ class WebHandler(BaseHTTPRequestHandler):
                 return
 
             if path == "/api/student/run":
+                if os.environ.get("IMMUTABLE_DISABLE_RUN"):
+                    self._json(403, {"error": "code execution is disabled on this public demo"})
+                    return
                 rel = payload.get("path")
                 if not rel:
                     self._json(400, {"error": "path required"})

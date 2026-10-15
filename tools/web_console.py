@@ -11,6 +11,7 @@ network and is not recommended: the console runs student code.
 """
 import argparse
 import ipaddress
+import os
 import sys
 import webbrowser
 from pathlib import Path
@@ -34,14 +35,14 @@ def _loopback(host: str) -> bool:
 def main() -> int:
     ap = argparse.ArgumentParser(description="Immutable web console")
     ap.add_argument("--host", default="127.0.0.1")
-    ap.add_argument("--port", type=int, default=8000)
+    ap.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
     ap.add_argument("--dir", default=None, help="working directory for evidence and session data")
     ap.add_argument("--mode", choices=("demo", "exam"), default="demo")
     ap.add_argument("--open", action="store_true", help="open the browser")
     ap.add_argument("--allow-remote", action="store_true", help="permit a non-loopback --host")
     a = ap.parse_args()
 
-    if not _loopback(a.host) and not a.allow_remote:
+    if not _loopback(a.host) and not (a.allow_remote or os.environ.get("IMMUTABLE_PUBLIC_HOST")):
         print(f"refusing to bind {a.host}: the console runs student code. "
               "Use 127.0.0.1, or pass --allow-remote if you really mean it.", file=sys.stderr)
         return 2
