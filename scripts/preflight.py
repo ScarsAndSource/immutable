@@ -41,11 +41,11 @@ def check_env() -> None:
 
 def check_assets() -> None:
     web = ROOT / "web"
-    for rel in ("vendor/tailwind.js", "vendor/fonts.css", "safe.js"):
-        row("PASS" if (web / rel).is_file() else "FAIL", f"web/{rel}", "" if (web / rel).is_file() else "run scripts/vendor_web.py")
+    for rel in ("vendor/tailwind.js", "vendor/fonts.css", "safe.js", "teacher.html", "teacher.css", "teacher.js", "teacher-page.js"):
+        row("PASS" if (web / rel).is_file() else "FAIL", f"web/{rel}", "" if (web / rel).is_file() else "missing file")
     ext = re.compile(r"""(?:src|href)\s*=\s*["'](https?://[^"']+)["']|url\(\s*["']?(https?://[^)"']+)""", re.I)
     found = []
-    for name in ("index.html", "style.css", "app.js", "safe.js"):
+    for name in ("index.html", "style.css", "app.js", "safe.js", "teacher.html", "teacher.css", "teacher.js", "teacher-page.js"):
         p = web / name
         if p.exists():
             found += [f"{name}: {m.group(1) or m.group(2)}" for m in ext.finditer(p.read_text(encoding="utf-8"))]
@@ -70,20 +70,21 @@ def check_policy_doc() -> None:
 
 
 def check_innerhtml() -> None:
-    p = ROOT / "web" / "app.js"
-    if not p.exists():
-        return
     bad = []
-    for n, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
-        m = re.search(r"innerHTML\s*=\s*(.*)", line)
-        if not m:
+    for target in ("app.js", "teacher.js"):
+        p = ROOT / "web" / target
+        if not p.exists():
             continue
-        rhs = m.group(1).strip()
-        static = re.match(r"""^(["'`])[^$]*\1;?$""", rhs) or rhs.startswith(("html`", "html ("))
-        if not static:
-            bad.append(str(n))
+        for n, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
+            m = re.search(r"innerHTML\s*=\s*(.*)", line)
+            if not m:
+                continue
+            rhs = m.group(1).strip()
+            static = re.match(r"""^(["'`])[^$]*\1;?$""", rhs) or rhs.startswith(("html`", "html ("))
+            if not static:
+                bad.append(f"{target}:{n}")
     row("PASS" if not bad else "WARN", "innerHTML only via html`` or static text",
-        "lines " + ", ".join(bad) if bad else "")
+        ", ".join(bad) if bad else "")
 
 
 def check_fsync(directory: str | None) -> None:

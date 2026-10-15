@@ -53,7 +53,7 @@ Offline machines: `scripts/offline_install.sh prepare` once on a connected machi
     lab/             the tamper lab: 37 scripted scenarios in 10 groups
     web/             the console UI
     docs/            FORMAT, THREAT_MODEL, ARCHITECTURE, POLICY, LIMITATIONS, DEPLOYMENT,
-                     EVALUATION, DEMO_SCRIPT, JUDGE_QA, SECURITY_REVIEW, REHEARSAL
+                     EVALUATION, DEMO_SCRIPT, JUDGE_QA, SECURITY_REVIEW, REHEARSAL, TEACHER_BOARD
     scripts/         preflight, offline install, web vendoring, demo fallback capture
     vectors/         golden canonicalization and signature vectors for other implementations
 

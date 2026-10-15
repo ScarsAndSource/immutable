@@ -1,0 +1,56 @@
+/* teacher.css: the lab board. Reuses style.css variables; every var() has a fallback. */
+.tb{--tb-amber:#8a5a00;--tb-amber-bg:#fdf5e4;--tb-blue:#1f5f99;--tb-blue-bg:#edf4fb;display:flex;flex-direction:column;gap:18px}
+.tb-h{font-size:28px;margin-top:2px}
+.tb-h3{margin-top:20px;margin-bottom:6px}
+.tb-ctl{gap:14px}
+.tb-chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--mute,#6d7078);cursor:pointer}
+.tb-chk input{accent-color:var(--ink,#17191f)}
+.tb-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* status colours: one custom property pair per status, used by cards, pills and chips */
+.tb-s-offline,.tb-s-unsubmitted{--c:var(--bad,#b3261e);--bg:var(--bad-bg,#fcefed)}
+.tb-s-ended,.tb-s-quiet{--c:var(--tb-amber);--bg:var(--tb-amber-bg)}
+.tb-s-restarted{--c:var(--tb-blue);--bg:var(--tb-blue-bg)}
+.tb-s-active{--c:var(--ok,#2f6b4f);--bg:var(--card,#fff)}
+.tb-s-submitted{--c:var(--ink,#17191f);--bg:var(--card,#fff)}
+.tb-s-not_started,.tb-s-transferred{--c:var(--mute,#6d7078);--bg:var(--card,#fff)}
+
+/* banners */
+.tb-banners:empty{display:none}
+.tb-banner{border:1px solid var(--line,#e9e4d9);border-radius:var(--r,10px);padding:12px 16px;background:var(--card,#fff);font-size:14px;line-height:1.5}
+.tb-banner+.tb-banner{margin-top:8px}
+.tb-banner.bad{border-color:#e8b9b4;background:var(--bad-bg,#fcefed)}
+.tb-banner.warn{border-color:#e6cf9c;background:var(--tb-amber-bg)}
+.tb-banner.info{border-color:#b7d0e8;background:var(--tb-blue-bg)}
+.tb-banner.sim{border-style:dashed;color:var(--mute,#6d7078)}
+
+/* chips */
+.tb-chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tb-total{font:600 13px "JetBrains Mono",ui-monospace,monospace;margin-right:6px}
+.tb-chip{border:1px solid var(--line,#e9e4d9);background:var(--card,#fff);border-radius:99px;padding:5px 12px;font-size:13px;cursor:pointer;color:var(--c,var(--ink,#17191f))}
+.tb-chip[aria-pressed="true"]{background:var(--ink,#17191f);color:#fff;border-color:var(--ink,#17191f)}
+
+/* grid and cards */
+.tb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.tb-card{text-align:left;display:flex;flex-direction:column;gap:4px;min-height:132px;padding:12px 14px;border:1px solid var(--line,#e9e4d9);border-left:4px solid var(--c,var(--line,#e9e4d9));border-radius:var(--r,10px);background:var(--bg,var(--card,#fff));cursor:pointer;font-size:13px;line-height:1.4}
+.tb-card:hover,.tb-card.on{border-color:var(--ink,#17191f);border-left-color:var(--c,var(--ink,#17191f))}
+.tb-card.on{box-shadow:0 0 0 1px var(--ink,#17191f)}
+.tb-card.tb-s-not_started,.tb-card.tb-s-transferred{border-left-style:dashed}
+.tb-card.tb-sim{border-style:dashed;border-left-style:solid}
+.tb-card:focus-visible,.tb-chip:focus-visible{outline:2px solid var(--ink,#17191f);outline-offset:2px}
+.tb-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tb-pill{display:inline-flex;align-items:center;gap:4px;font:600 11px "Hanken Grotesk",system-ui,sans-serif;color:var(--c,var(--mute,#6d7078));white-space:nowrap}
+.tb-cand{font-size:11px;color:var(--mute,#6d7078)}
+.tb-line{display:block}
+.tb-sm{font-size:12px;color:var(--mute,#6d7078)}
+
+/* detail */
+.tb-dcard{padding:20px}
+.tb-why{margin:12px 0;color:var(--mute,#6d7078);font-size:14px;max-width:760px}
+.tb-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.tb-facts>div{border:1px solid var(--line,#e9e4d9);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--mute,#6d7078)}
+.tb-facts b{font-size:14px;font-weight:600;color:var(--ink,#17191f)}
+.tb-table{overflow-x:auto}
+.tb-note{max-width:760px}
+@media(max-width:560px){.tb-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
+@media print{.tb-ctl,.tb-chips{display:none}}

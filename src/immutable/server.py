@@ -27,7 +27,9 @@ from .policy import is_relpath
 from .agent import Agent, AgentError
 from .clockcheck import ClockPolicy
 from .courier import Courier
-from .events import Event
+from .board import BoardPolicy, BoardService
+from .board_demo import SimClass
+from .events import Event, ID_RE
 from .net import HttpTransport, WitnessServer
 from .report import render
 from .roster import Roster, Seat
@@ -91,6 +93,7 @@ class ImmutableService:
         self.witness_server = WitnessServer(self.witness, host="127.0.0.1", port=0)
         self.witness_thread = threading.Thread(target=self.witness_server.serve_forever, daemon=True)
         self.witness_thread.start()
+        self.board = BoardService(self.witness, BoardPolicy(), extra=SimClass())
 
         # Seed initial files in workspace
         self._seed_workspace()
@@ -411,6 +414,14 @@ class ImmutableService:
         with self.lock:
             return self.witness.report()
 
+    def get_teacher_board(self, sim: bool = True) -> dict[str, Any]:
+        # The witness has its own lock. The service lock is deliberately not taken, so a
+        # teacher polling every few seconds never delays the student's editor.
+        return self.board.snapshot(include_extra=sim)
+
+    def get_teacher_seat(self, session: str, ws: str) -> dict[str, Any] | None:
+        return self.board.seat(session, ws)
+
     def run_tamperlab_trial(self, scenario_id: str, seed: int = 0) -> dict[str, Any]:
         from lab.harness import judge, run_trials
         from lab.scenarios import SCENARIOS
@@ -581,6 +592,30 @@ class WebHandler(BaseHTTPRequestHandler):
 
         if path == "/api/tamperlab/scenarios":
             self._json(200, service.list_scenarios())
+            return
+
+        if path == "/api/mode":
+            self._json(200, {"mode": self.server.sec.mode})
+            return
+
+        if path in ("/api/teacher/board", "/api/teacher/seat"):
+            qs = parse_qs(parsed.query)
+            try:
+                if path == "/api/teacher/board":
+                    self._json(200, service.get_teacher_board(qs.get("sim", ["1"])[0] != "0"))
+                    return
+                session, ws = qs.get("session", [""])[0], qs.get("ws", [""])[0]
+                if not ID_RE.match(ws) or not ID_RE.match(session):
+                    self._json(400, {"error": "bad seat"})
+                    return
+                trail = service.get_teacher_seat(session, ws)
+                if trail is None:
+                    self._json(404, {"error": "no contact history for that seat"})
+                    return
+                self._json(200, trail)
+            except Exception:
+                traceback.print_exc(file=sys.stderr)
+                self._json(500, {"error": "internal error"})
             return
 
         # Serve static web frontend

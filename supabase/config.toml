@@ -54,5 +54,8 @@ verify_jwt = false
 [functions.sign]
 verify_jwt = false   # Assessor route: protected by Ed25519 signature verification
 
+[functions.board]
+verify_jwt = false   # Teacher board: uses Authorization: Bearer <TEACHER_TOKEN>
+
 [realtime]
 enabled = false       # Not used by this application

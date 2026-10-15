@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from immutable import keys
+from immutable.board import BoardPolicy
 from immutable.net import WitnessServer
 from immutable.roster import Roster, RosterError
 from immutable.witness import Witness, WitnessError
@@ -48,6 +49,12 @@ def main() -> int:
         if name == "run":
             p.add_argument("--host", default="0.0.0.0")
             p.add_argument("--port", type=int, default=9443)
+            p.add_argument("--teacher-token-file", default=None,
+                           help="file holding the teacher board token (16+ chars); the board is "
+                                "off without one. IMMUTABLE_TEACHER_TOKEN also works")
+            p.add_argument("--exam-end", type=int, default=None,
+                           help="exam window end, Unix seconds; lets the board flag "
+                                "'window closed, not submitted'")
     a = ap.parse_args()
 
     if a.cmd == "init":
@@ -70,8 +77,17 @@ def main() -> int:
             print("  no refusals")
         return 0
 
-    srv = WitnessServer(w, a.host, a.port)
+    token = None
+    if a.teacher_token_file:
+        try:
+            token = Path(a.teacher_token_file).read_text(encoding="utf-8").strip()
+        except OSError as e:
+            sys.exit(f"cannot read the teacher token file: {e}")
+    policy = BoardPolicy(window_end_ms=a.exam_end * 1000) if a.exam_end else None
+    srv = WitnessServer(w, a.host, a.port, teacher_token=token, board_policy=policy)
     print(f"witness {a.id} listening on {a.host}:{srv.port}   key {g4(keys.key_id(w._signer.pub_hex)[:32])}")
+    if srv.teacher_enabled:
+        print(f"teacher board: http://<this machine>:{srv.port}/teacher   (token required)")
     import threading
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     try:

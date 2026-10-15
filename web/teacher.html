@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>Lab board</title>
+  <link rel="stylesheet" href="vendor/fonts.css"/>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="teacher.css"/>
+</head>
+<body>
+  <header class="no-print">
+    <div class="bar">
+      <div class="brand">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="3" width="14" height="14" rx="3"/><path d="M7 8h6M7 12h4"/></svg>
+        Immutable <span class="mute">· Lab board</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="tb-login" class="view wrap narrow stack hidden">
+      <div>
+        <h1>Teacher token</h1>
+        <p class="mute" style="margin-top:8px">Enter the token the exam office gave you for this lab's witness. It stays in this tab only.</p>
+      </div>
+      <div class="card stack">
+        <input id="tb-token" type="password" autocomplete="off" spellcheck="false" aria-label="Teacher token" style="width:100%;height:42px;padding:0 12px;border:1px solid var(--line);border-radius:8px;font:14px 'JetBrains Mono',monospace"/>
+        <div><button id="tb-go" type="button" class="btn primary">Open the board</button></div>
+        <p id="tb-msg" class="small bad" role="alert"></p>
+      </div>
+    </section>
+    <section id="teacher-root" class="view wrap hidden"></section>
+  </main>
+
+  <script src="safe.js"></script>
+  <script src="teacher.js"></script>
+  <script src="teacher-page.js"></script>
+</body>
+</html>

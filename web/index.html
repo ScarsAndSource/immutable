@@ -6,6 +6,7 @@
   <title>Immutable</title>
   <link rel="stylesheet" href="vendor/fonts.css"/>
   <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="teacher.css"/>
 </head>
 <body>
   <div id="backend-down-banner" role="alert">Cannot reach the evidence server.</div>
@@ -23,6 +24,7 @@
         <button type="button" data-nav-view="assessor">Audit</button>
         <button type="button" data-nav-view="tamperlab">Tamper lab</button>
         <button type="button" data-nav-view="witness">Witness</button>
+        <button type="button" id="nav-teacher" data-nav-view="teacher">Teacher</button>
       </nav>
       <div class="lang">
         <button id="lang-en" type="button" class="on">EN</button>
@@ -184,11 +186,17 @@
       </div>
       <div id="witness-content-area" class="stack"></div>
     </section>
+
+    <!-- 7. Teacher -->
+    <section id="view-teacher" class="view wrap stack hidden">
+      <div id="teacher-root"></div>
+    </section>
   </main>
 
   <aside id="toast-banner" class="hidden" role="status"><span id="toast-message"></span></aside>
 
   <script src="safe.js"></script>
+  <script src="teacher.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

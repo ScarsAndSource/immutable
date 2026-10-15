@@ -23,7 +23,8 @@ from http.cookies import CookieError, SimpleCookie
 COOKIE = "im_session"
 MAX_BODY = 2 * 1024 * 1024
 MAX_FILE_BYTES = 1024 * 1024
-EXAM_BLOCKED = ("/api/assessor/", "/api/tamperlab/", "/api/witness/", "/api/receipt/check")
+EXAM_BLOCKED = ("/api/assessor/", "/api/tamperlab/", "/api/witness/", "/api/receipt/check",
+                "/api/teacher/")
 RATE_LIMITED = {                      # path: (burst, refill per second)
     "/api/student/run": (5, 1.0),
     "/api/student/file": (30, 10.0),

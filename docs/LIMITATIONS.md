@@ -44,3 +44,4 @@ Said plainly, because the project's value is its honesty.
 - Not built: Raspberry Pi witness, offline browser receipt validator, chained signed ingest log.
 - Windows is best-effort; resource limits in the runner are POSIX only.
 - Hindi student strings need native review.
+- Teacher board: liveness indicates machine/network state, not proctoring or student behavior surveillance (by design; see docs/TEACHER_BOARD.md).

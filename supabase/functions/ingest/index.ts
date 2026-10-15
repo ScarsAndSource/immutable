@@ -375,6 +375,22 @@ async function handleBatch(req: Request): Promise<Response> {
     serverSeed: signer.seed,
   });
 
+  // Extract teacher board fields from the newest event in the batch
+  function boardFields(rawEvents: unknown[] | undefined) {
+    if (!Array.isArray(rawEvents) || !rawEvents.length) return {};
+    const ev = rawEvents[rawEvents.length - 1] as Record<string, unknown> | undefined;
+    if (!ev || typeof ev !== "object") return {};
+    const b = (ev.body as Record<string, unknown>) || {};
+    return {
+      last_boot_id:  typeof ev.boot_id === "string" ? ev.boot_id : null,
+      last_typ:      typeof ev.typ === "string" ? ev.typ : null,
+      last_file:     typeof b.relpath === "string" ? b.relpath : null,
+      last_event_id: typeof ev.event_id === "string" ? ev.event_id : null,
+      last_seq:      typeof ev.seq === "number" ? ev.seq : null,
+      last_admit_ms: Number(now),
+    };
+  }
+
   // Store batch + ack, advance held state — atomically
   await db.from("batches").insert({
     exam_id, session_id, ws_id,
@@ -386,12 +402,23 @@ async function handleBatch(req: Request): Promise<Response> {
     ingested_at_ms: Number(now),
   }).throwOnError();
 
-  await db.from("sessions")
-    .update({ held_upto: last_seq, held_head: head })
-    .eq("exam_id", exam_id)
-    .eq("session_id", session_id)
-    .eq("ws_id", ws_id)
-    .throwOnError();
+  const extra = boardFields(doc.events as unknown[] | undefined);
+  try {
+    await db.from("sessions")
+      .update({ held_upto: last_seq, held_head: head, ...extra })
+      .eq("exam_id", exam_id)
+      .eq("session_id", session_id)
+      .eq("ws_id", ws_id)
+      .throwOnError();
+  } catch (_e) {
+    // Migration 00002 may not be applied yet in dev; fall back cleanly.
+    await db.from("sessions")
+      .update({ held_upto: last_seq, held_head: head })
+      .eq("exam_id", exam_id)
+      .eq("session_id", session_id)
+      .eq("ws_id", ws_id)
+      .throwOnError();
+  }
 
   return new Response(ackBytes, {
     status: 200,

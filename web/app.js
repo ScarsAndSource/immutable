@@ -58,7 +58,8 @@ const I18N = {
   },
 };
 
-const VIEWS = ["briefing", "workstation", "receipt", "assessor", "tamperlab", "witness"];
+const VIEWS = ["briefing", "workstation", "receipt", "assessor", "tamperlab", "witness", "teacher"];
+let teacherCtl = null;
 const FILES = {
   "solution.py":
     '"""Practical Exam: Task 1 - Consistent Digest Matrix"""\n\n' +
@@ -105,6 +106,7 @@ async function api(path, options = {}) {
 
 // --- Router ---
 function navigateTo(viewId) {
+  if (teacherCtl && viewId !== "teacher") { teacherCtl.stop(); teacherCtl = null; }
   VIEWS.forEach((id) => { const el = $(`view-${id}`); if (el) el.classList.toggle("hidden", id !== viewId); });
   document.querySelectorAll("[data-nav-view]").forEach((b) => {
     const on = b.dataset.navView === viewId;
@@ -112,6 +114,7 @@ function navigateTo(viewId) {
     if (on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
   });
   window.scrollTo({ top: 0, behavior: "smooth" });
+  if (viewId === "teacher") { openTeacher(); return; }
   const load = { workstation: refreshSession, receipt: loadReceipt, assessor: loadAssessorCase, tamperlab: loadTamperLab, witness: loadWitnessReport }[viewId];
   if (load) load();
 }
@@ -494,5 +497,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
   $("code-editor-textarea").value = FILES[activeFile];
   setLanguage("en");
+  loadMode();
   navigateTo("briefing");
 });
+
+function openTeacher() {
+  const root = $("teacher-root");
+  if (!root) return;
+  if (!teacherCtl) {
+    teacherCtl = window.TeacherBoard.mount(root, {
+      apiPrefix: "/api/teacher",
+      pollMs: 2000,
+    });
+  }
+}
+
+async function loadMode() {
+  try {
+    const info = await api("/api/mode");
+    if (info && info.mode === "exam") {
+      const b = $("nav-teacher");
+      if (b) b.remove();
+    }
+  } catch (e) {
+    /* ignore */
+  }
+}
