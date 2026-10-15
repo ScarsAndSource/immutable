@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from immutable import hashing, keys
 from immutable.agent import Agent, AgentError
 from immutable.events import Event
+from immutable.roster import Roster, RosterError, preflight
 from immutable.runner import run_python
 from immutable.wal import WalError
 
@@ -39,6 +40,8 @@ def main() -> int:
     ap.add_argument("--roster", help="roster file; omit before B4 (recorded as all zeros)")
     ap.add_argument("--key", help="seed file (default: <evidence>/ws.key)")
     ap.add_argument("--heartbeat", type=float, default=30.0)
+    ap.add_argument("--assessor-pub", help="trusted assessor public key (from the exam office)")
+    ap.add_argument("--transfer", help="assessor-signed transfer token, if this machine replaces another")
     a = ap.parse_args()
 
     ev_dir = Path(a.evidence)
@@ -52,12 +55,32 @@ def main() -> int:
         print(f"new key written to {key_path}")
     print(f"public key : {signer.pub_hex}\nkey id     : {keys.key_id(signer.pub_hex)}\n")
 
-    agent = Agent.open(
-        evidence_dir=ev_dir, workspace=a.workspace, exam_id=a.exam,
-        session_id=a.session, ws_id=a.ws, signer=signer,
-        paper_sha256=hashing.file_sha256(a.paper),
-        roster_sha256=hashing.file_sha256(a.roster) if a.roster else hashing.ZERO,
-        heartbeat_s=a.heartbeat)
+    paper_sha = hashing.file_sha256(a.paper)
+    roster_sha = hashing.ZERO
+    if a.roster:
+        if not a.assessor_pub:
+            sys.exit("--roster needs --assessor-pub (the key the exam office gave you)")
+        raw = Path(a.roster).read_bytes()
+        try:
+            roster = Roster.parse(raw, trusted_assessor=a.assessor_pub)
+        except RosterError as e:
+            sys.exit(f"roster rejected: {e}")
+        problems = preflight(roster, exam_id=a.exam, ws_id=a.ws, pub=signer.pub_hex,
+                             paper_sha256=paper_sha, as_transfer=bool(a.transfer))
+        if problems:
+            sys.exit("cannot start:\n  " + "\n  ".join(problems))
+        roster_sha = hashing.sha256_hex(raw)
+        print(f"roster ok  : {roster_sha[:16]}…  seat {a.ws} is enrolled for this key")
+    token = Path(a.transfer).read_bytes() if a.transfer else None
+    try:
+        agent = Agent.open(
+            evidence_dir=ev_dir, workspace=a.workspace, exam_id=a.exam,
+            session_id=a.session, ws_id=a.ws, signer=signer,
+            paper_sha256=paper_sha, roster_sha256=roster_sha,
+            heartbeat_s=a.heartbeat, transfer_token=token, assessor_pub=a.assessor_pub)
+    except AgentError as e:
+        sys.exit(f"cannot start: {e}")
+
     agent.listeners.append(ledger)
     print("seq     type           hash      detail")
     for e in agent._wal.events:

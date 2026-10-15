@@ -31,7 +31,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-from . import canon, hashing, merkle
+from . import canon, hashing, merkle, transfer
 from .batch import Batch, seal
 from .events import Event
 from .fsys import FS, RealFS
@@ -110,7 +110,21 @@ class Agent:
              exam_id: str, session_id: str, ws_id: str, signer: Signer,
              paper_sha256: str, roster_sha256: str = hashing.ZERO,
              fs: FS | None = None, heartbeat_s: float = 30.0,
-             checkpoint_every: int = 64) -> "Agent":
+             checkpoint_every: int = 64,
+             transfer_token: bytes | None = None,
+             assessor_pub: str | None = None) -> "Agent":
+        tbody = tsig = None
+        if transfer_token is not None:
+            if assessor_pub is None:
+                raise AgentError("a transfer token needs assessor_pub so it can be checked")
+            try:
+                tbody, tsig = transfer.verify_token(transfer_token, assessor_pub)
+            except transfer.TransferError as e:
+                raise AgentError(f"transfer token rejected: {e}") from None
+            if (tbody["exam_id"], tbody["session_id"], tbody["to_ws_id"], tbody["to_pub"]) \
+                    != (exam_id, session_id, ws_id, signer.pub_hex):
+                raise AgentError("transfer token is for a different exam, session, seat or key")
+
         ev_dir = Path(evidence_dir)
         (ev_dir / "outbox").mkdir(parents=True, exist_ok=True, mode=0o700)
         fs = fs or RealFS()
@@ -137,9 +151,15 @@ class Agent:
                                       "roster_sha256": roster_sha256,
                                       "agent_ver": AGENT_VER})
             a._emit("BOOT", {"reason": "start"})
+            if tbody is not None:           # always seq 2: SESSION_START, BOOT, TRANSFER
+                a._emit("TRANSFER", {"from_ws_id": tbody["from_ws_id"],
+                                     "from_last_seq": tbody["from_last_seq"],
+                                     "from_head": tbody["from_head"],
+                                     "assessor_sig": tsig})
         a._observe(a.ws.scan())          # baseline: starter files, or changes made while down
         a.flush()
         return a
+
 
     def close(self) -> None:
         """Clean stop without submitting. Reopening later is legal and logged as a resume."""
