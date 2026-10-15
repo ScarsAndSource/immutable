@@ -33,10 +33,10 @@ def boot_id() -> str:
 
 def boottime_ns() -> int:
     clk = getattr(time, "CLOCK_BOOTTIME", None)
-    if clk is not None:
-        return time.clock_gettime_ns(clk)
-    return time.monotonic_ns()           # Windows/macOS: best effort
-
+    v = time.clock_gettime_ns(clk) if clk is not None else time.monotonic_ns()
+    # Hosts with >104 days uptime exceed JS-safe ints (canon.MAX_INT). Only deltas
+    # within one boot matter, so wrap below 2**52. No-op on normal machines.
+    return v % (1 << 52)
 
 def wall_ms() -> int:
     return time.time_ns() // 1_000_000
