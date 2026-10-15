@@ -71,3 +71,17 @@ chain, sealed into a batch immediately. A reopen of an empty log emits nothing.
 Acknowledged = fsynced. Only events at or below `durable_seq` may be sealed or
 shown to a witness. Any write or fsync error fail-stops the log until recovery.
 
+## 8. Evidence directory (one per session, per workstation)
+    session.wal                      write-ahead log (section 7)
+    ws.key                           0600 seed (keep off the student's account if you can)
+    outbox/FFFFFFFF-LLLLLLLL.batch.json   sealed batches, contiguous, first_seq-last_seq
+    submission/manifest.json         canonical: {v, exam_id, session_id, ws_id, files:[{path,sha256,size}]}
+    submission/blobs/<sha256>        submitted file bytes, stored only under their hash
+
+Event order guarantees: SESSION_START, BOOT first. A save always precedes the
+RUN_START that uses it (the hash is of the exact bytes that executed). Submit is
+FILE_SAVE* (if anything changed), CHECKPOINT, SUBMIT, SESSION_END. A RUN_START
+without a RUN_END means the process died mid-run.
+`manifest_sha256` is plain SHA-256 of the manifest bytes.
+
+

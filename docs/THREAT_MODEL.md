@@ -41,6 +41,9 @@ Every attack test links back to a row ID here. Update this file before code.
 | T11 | Benign fault read as an accusation | X5 | A5 | n/a | Benign faults yield NOTES, never TAMPER_SUSPECTED |
 | T12 | Disk acknowledges fsync but loses the data (write-cache lie, VM layer) | X5 | A2 | Detected, not prevented | Shows up as a recovered chain shorter than a witness-held head. State the fsync-honesty assumption. |
 | T13 | Restore-on-reboot wipes the WAL | X2 X5 | A2 | Yes | `WalMissing` on a seat that already had a session. Persistent evidence volume required. |
+| T14 | Student kills the agent, or runs it as the same OS user and reads the key | X1 | A2 | Partly | Silence shows as a heartbeat gap. Unanchored tail is reported (T3). Separate OS user recommended. |
+| T15 | Student keeps work in files we cannot fingerprint (symlink, over 2 MiB, odd name) | X1 | A1 | Visible to the student | Listed in `skipped` and shown in the UI, never silently dropped. They are absent from the manifest by design. |
+
 
 
 ## Evidence assurance levels

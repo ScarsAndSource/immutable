@@ -24,6 +24,9 @@ def _relpath(v) -> bool:
             and all(p not in ("", ".", "..") for p in v.split("/")))
 
 
+is_relpath = _relpath
+
+
 def _uint(v) -> bool:
     return isinstance(v, int) and not isinstance(v, bool) and 0 <= v < 2**53
 
