@@ -1,0 +1,54 @@
+# Immutable byte format, v1
+
+Anything two machines must agree on lives here. If code and this file disagree,
+the code is wrong.
+
+## 1. Canonical JSON
+- UTF-8, no whitespace, no trailing newline, object keys sorted by **code point**.
+  (Python's default. JS `sort()` compares UTF-16 units and differs for astral
+  characters, so the JS side must compare by code point.)
+- Values: `null`, booleans, strings, arrays, objects, integers.
+- **No floats.** Integers must satisfy |n| <= 2^53 - 1 (JS-safe).
+- Strings must already be **NFC**. The encoder rejects non-NFC input instead of
+  silently rewriting it. No lone surrogates.
+- Parser rejects duplicate keys, NaN/Infinity, floats, depth > 32, size over limit.
+- Paths: POSIX relative, NFC, no `..`, no leading `/`, no backslash, no NUL.
+- Hashes: 64 lowercase hex. Signatures: 128 lowercase hex. Public keys: 64 hex.
+
+## 2. Domain separation
+Every hash and every signature input is
+`"immutable/v1/" || domain || 0x00 || data`.
+Domains: `event`, `batch`, `merkle.leaf`, `merkle.node`, `merkle.empty`, `key`,
+`checkpoint`, `roster`, `receipt`, `cosign`, `transfer`.
+File contents are the one exception: artifact hashes are plain SHA-256 of raw
+bytes so anyone can check them with `sha256sum`.
+
+## 3. Event
+Body (all fields required, no others):
+`v, exam_id, session_id, ws_id, seq, prev, type, wall_ms, boot_ns, boot_id, data`
+- `seq` starts at 0, +1 each event. `prev` is the previous event's hash;
+  genesis `prev` is 64 zeros.
+- `wall_ms`: Unix ms. `boot_ns`: CLOCK_BOOTTIME ns. `boot_id`: per-boot identifier.
+- Event hash = `H(event, canonical(body))`. `prev` is inside the body, so the
+  hash chains.
+- `data` must match the per-type schema in `policy.py`. Unknown types and
+  unknown keys are rejected. That is the no-surveillance guarantee.
+- Identifiers (exam, session, ws): `[A-Za-z0-9._-]{1,64}`. Candidate identity is
+  never in an event; it is bound through the roster.
+
+## 4. Batch
+`{"header": H, "events": [body...], "sig": hex}`
+Header: `v, exam_id, session_id, ws_id, first_seq, last_seq, count, first_prev,
+head, merkle_root, signer`
+- `head` = hash of the last event. `merkle_root` = RFC 6962 tree over the event
+  hashes in order (leaf and node prefixes via domains).
+- `sig` = Ed25519 over `tagged("batch", canonical(H))` by the key `signer`.
+
+## 5. Merkle
+RFC 6962 shape: split at the largest power of two strictly below n. Leaf =
+`H(merkle.leaf, raw event hash)`, node = `H(merkle.node, left || right)`,
+empty = `H(merkle.empty, "")`. Proofs are bottom-up sibling lists.
+
+## 6. Verification result
+`verify_batch` returns a list of coded findings. An **empty list means
+self-consistent (A0), not verified.** Only an outside anchor upgrades that.

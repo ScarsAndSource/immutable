@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "immutable"
+version = "0.1.0"
+description = "Tamper-evident, offline-first exam evidence. A log that someone else signed."
+requires-python = ">=3.11"
+dependencies = ["cryptography>=42"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
