@@ -61,6 +61,8 @@ class SyncController:
         self._next_retry: float | None = None
         self._retry_index = 0
         self._detail: str | None = None
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
 
     @property
     def editable(self) -> bool:
@@ -105,6 +107,24 @@ class SyncController:
                 return True
             self._lock_editor()
             return False
+
+    def start(self, interval_s: float = 0.25) -> None:
+        """Retry while the UI is idle; retries still obey the documented backoff."""
+        if self._thread and self._thread.is_alive():
+            return
+        self._stop.clear()
+
+        def loop() -> None:
+            while not self._stop.wait(interval_s):
+                self.tick()
+
+        self._thread = threading.Thread(target=loop, name="immutable-sync", daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
+        if self._thread:
+            self._thread.join(timeout=2)
 
     def _attempt(self) -> bool:
         try:

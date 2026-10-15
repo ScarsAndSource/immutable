@@ -33,6 +33,7 @@ from .report import render
 from .roster import Roster, Seat
 from .runner import run_python
 from .store import Store
+from .sync import SyncController, SyncLocked
 from .witness import Witness
 
 DEFAULT_PORT = 8000
@@ -48,11 +49,13 @@ class ImmutableService:
         self.workspace_dir = self.root_dir / "workspace"
         self.witness_dir = self.root_dir / "witness"
         self.store_dir = self.root_dir / "store"
+        self.drafts_dir = self.root_dir / "drafts"  # local recovery copy; never evidence
 
         self.evidence_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.workspace_dir.mkdir(parents=True, exist_ok=True)
         self.witness_dir.mkdir(parents=True, exist_ok=True)
         self.store_dir.mkdir(parents=True, exist_ok=True)
+        self.drafts_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
 
         # Keys
         self.assessor_signer = keys.Signer.generate()
@@ -95,6 +98,7 @@ class ImmutableService:
         # Active agent & courier
         self.agent: Agent | None = None
         self.courier: Courier | None = None
+        self.sync: SyncController | None = None
         self.last_receipt: dict[str, Any] | None = None
         self._init_agent()
 
@@ -127,6 +131,8 @@ class ImmutableService:
 
     def _init_agent(self) -> None:
         with self.lock:
+            if self.sync:
+                self.sync.stop()
             if self.courier:
                 try:
                     self.courier.stop()
@@ -161,14 +167,25 @@ class ImmutableService:
                 session_id=self.session_id,
                 ws_id=self.ws_id,
             )
+            self.sync = SyncController(
+                flush=self.agent.flush,
+                status=self.agent.status,
+                pump=self.courier.pump_once,
+            )
             self.courier.start()
+            # The editor stays CONNECTING until this establishes an outside hold.
+            self.sync.synchronize()
+            self.sync.start()
 
     def get_student_session(self) -> dict[str, Any]:
         with self.lock:
             if not self.agent:
                 self._init_agent()
             assert self.agent is not None
-            self.agent.tick()
+            if not self.agent.status()["ended"]:
+                self.agent.tick()
+            if self.sync and not self.agent.status()["ended"]:
+                self.sync.tick()
 
             events_data = []
             for ev in self.agent._wal.events:
@@ -199,6 +216,7 @@ class ImmutableService:
                 courier_status = self.courier.status()
 
             status = self.agent.status()
+            sync = self.sync.snapshot() if self.sync else None
 
             # Check anchors count
             anchors_count = 0
@@ -224,6 +242,13 @@ class ImmutableService:
                 "durable_seq": status["durable_seq"],
                 "sealed_upto": status["sealed_upto"],
                 "ended": status["ended"],
+                "sync": {
+                    "state": sync.state.value if sync else "connecting",
+                    "editable": bool(self.sync and self.sync.editable),
+                    "last_confirmed_seq": sync.last_confirmed_seq if sync else -1,
+                    "next_retry_in_ms": sync.next_retry_in_ms if sync else None,
+                    "detail": sync.detail if sync else "sync controller unavailable",
+                },
                 "events": events_data,
                 "files": files,
                 "witness": {
@@ -241,6 +266,9 @@ class ImmutableService:
         with self.lock:
             if not self.agent:
                 raise AgentError("Session not initialized")
+            if not self.sync:
+                raise AgentError("Sync controller not initialized")
+            self.sync.require_editable()
             if not is_relpath(rel_path):
                 raise ValueError("that file name is not allowed")
             if len(content.encode("utf-8")) > websec.MAX_FILE_BYTES:
@@ -250,9 +278,38 @@ class ImmutableService:
             if not target.is_relative_to(root):
                 raise ValueError("Path escapes workspace")
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(content, encoding="utf-8")
+            raw = content.encode("utf-8")
+            # Preserve a recoverable local draft before changing the evidence workspace.
+            # It intentionally lives outside evidence/ and is never put in a manifest.
+            draft = (self.drafts_dir / rel_path).resolve()
+            if not draft.is_relative_to(self.drafts_dir.resolve()):
+                raise ValueError("Path escapes drafts")
+            draft.parent.mkdir(parents=True, exist_ok=True)
+            draft.write_bytes(raw)
+            target.write_bytes(raw)
             self.agent.tick()
-            return {"ok": True, "path": rel_path, "sha256": hashing.file_sha256(target)}
+            confirmed = self.sync.synchronize()
+            return {"ok": True, "confirmed": confirmed, "path": rel_path,
+                    "sha256": hashing.file_sha256(target),
+                    "sync": self._sync_dict()}
+
+    def _sync_dict(self) -> dict[str, Any]:
+        if not self.sync:
+            return {"state": "connecting", "editable": False, "last_confirmed_seq": -1}
+        s = self.sync.snapshot()
+        return {"state": s.state.value, "editable": self.sync.editable,
+                "last_confirmed_seq": s.last_confirmed_seq,
+                "next_retry_in_ms": s.next_retry_in_ms, "detail": s.detail}
+
+    def _advance_sync(self) -> bool:
+        """Keep non-edit events durable while a locked editor waits for recovery."""
+        if not self.sync:
+            return False
+        if self.sync.editable:
+            return self.sync.synchronize()
+        if self.agent:
+            self.agent.flush()
+        return self.sync.tick()
 
     def run_code(self, rel_path: str) -> dict[str, Any]:
         with self.lock:
@@ -261,8 +318,7 @@ class ImmutableService:
             if not is_relpath(rel_path):
                 raise ValueError("that file name is not allowed")
             res = run_python(self.agent, rel_path)
-            if self.courier:
-                self.courier.pump_once()
+            self._advance_sync()
             return {
                 "exit_code": res.exit_code,
                 "duration_ms": res.duration_ms,
@@ -276,9 +332,7 @@ class ImmutableService:
             if not self.agent:
                 raise AgentError("Session not initialized")
             ev = self.agent.checkpoint()
-            self.agent.flush()
-            if self.courier:
-                self.courier.pump_once()
+            self._advance_sync()
             return {
                 "seq": ev.seq,
                 "hash": ev.hash(),
@@ -291,14 +345,10 @@ class ImmutableService:
             if not self.agent:
                 raise AgentError("Session not initialized")
             batches = self.agent.flush()
-            delivered = 0
-            if self.courier:
-                for _ in range(5):
-                    st = self.courier.pump_once()
-                    if st.get("pending", 0) == 0:
-                        break
-                delivered = self.courier.status().get("delivered_upto", 0)
-            return {"sealed_batches": len(batches), "delivered_upto": delivered}
+            confirmed = self._advance_sync()
+            delivered = self.courier.status().get("delivered_upto", -1) if self.courier else -1
+            return {"sealed_batches": len(batches), "delivered_upto": delivered,
+                    "confirmed": confirmed, "sync": self._sync_dict()}
 
     def submit(self) -> dict[str, Any]:
         with self.lock:
@@ -334,6 +384,8 @@ class ImmutableService:
                 "standing": receipt_mod.standing(case.body, a),
             }
             self.last_receipt = receipt
+            if self.sync:
+                self.sync.mark_finalized()
             return receipt
 
     def check_receipt(self, token: str) -> dict[str, Any]:
@@ -412,6 +464,11 @@ class ImmutableService:
         ]
 
     def close(self) -> None:
+        if self.sync:
+            try:
+                self.sync.stop()
+            except Exception:
+                pass
         if self.courier:
             try:
                 self.courier.stop()
@@ -592,7 +649,7 @@ class WebHandler(BaseHTTPRequestHandler):
 
             self._json(404, {"error": "unknown_endpoint", "path": path})
 
-        except (ValueError, AgentError) as exc:
+        except (ValueError, AgentError, SyncLocked) as exc:
             self._json(400, {"error": str(exc)})
         except Exception:
             traceback.print_exc(file=sys.stderr)

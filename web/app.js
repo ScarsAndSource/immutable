@@ -225,6 +225,8 @@ function renderWorkstation(data) {
     witnessTag.textContent = `[LAN WITNESS · ${count} CO-SIGNATURES · CHAIN INTACT]`;
   }
 
+  renderSyncState(data.sync || {});
+
   // Files List
   renderFilesList(data.files || []);
 
@@ -242,6 +244,28 @@ function renderWorkstation(data) {
       submitBtn.onclick = handleFinalSubmit;
     }
   }
+}
+
+function renderSyncState(sync) {
+  const state = sync.state || "connecting";
+  const editable = sync.editable === true;
+  const banner = document.getElementById("sync-status-banner");
+  const editor = document.getElementById("code-editor-textarea");
+  const save = document.getElementById("btn-save-file");
+  const messages = {
+    synced: `Saved and confirmed through event #${sync.last_confirmed_seq}.`,
+    probing: "Saving is being retried. You can keep typing for a moment.",
+    locked: "Sync stopped. Editing is paused until the saved work is confirmed. Your local draft is safe.",
+    resync: "Reconnecting and confirming the saved evidence. Editing remains paused.",
+    connecting: "Connecting evidence sync. Editing will open after the first confirmation.",
+    finalized: "This session is finalized. Your receipt is available."
+  };
+  if (banner) {
+    banner.textContent = messages[state] || "Checking evidence sync…";
+    banner.classList.toggle("border-error", state === "locked");
+  }
+  if (editor) editor.readOnly = !editable;
+  if (save) save.disabled = !editable;
 }
 
 function renderFallbackWorkstation() {
@@ -339,13 +363,13 @@ async function handleSaveFile() {
   const btn = document.getElementById("btn-save-file");
   if (btn) btn.textContent = "Saving...";
 
-  await api("/api/student/file", {
+  const res = await api("/api/student/file", {
     method: "POST",
     body: JSON.stringify({ path: activeFile, content })
   });
 
   if (btn) btn.textContent = "Save File";
-  showToast("File saved & SHA-256 fingerprint committed to WAL");
+  showToast(res?.confirmed ? "File saved and confirmed" : "File saved locally; confirmation is retrying");
   refreshSession();
 }
 
