@@ -62,6 +62,7 @@ class Code(str, Enum):
     BOOT_REVISIT = "BOOT_REVISIT"
     CLOCK_STEP = "CLOCK_STEP"
     CLOCK_OFFSET = "CLOCK_OFFSET"
+    CLOCK_DRIFT = "CLOCK_DRIFT"
     SILENCE = "SILENCE"
     # anchors
     ANCHOR_CONFLICT = "ANCHOR_CONFLICT"
@@ -122,6 +123,7 @@ MEANING: dict[Code, tuple[str, str]] = {
     Code.BOOT_REVISIT: ("A boot identifier returned after a different boot.", "Look for spliced events."),
     Code.CLOCK_STEP: ("The wall clock jumped relative to the machine's uptime clock.", "Usually a clock sync. Read wall times in this stretch with care."),
     Code.CLOCK_OFFSET: ("The machine's clock differs from an outside holder's clock.", "Usually a dead clock battery. Use the outside holder's times."),
+    Code.CLOCK_DRIFT: ("The wall clock ran fast or slow against the machine's uptime clock for a long stretch.", "Usually a clock sync or a failing clock. Read wall times in this stretch with care."),
     Code.SILENCE: ("A long stretch with no events.", "May be a student thinking, or the agent being stopped."),
     Code.ANCHOR_CONFLICT: ("An outside holder has a different event at this position than the log does.", "One of the two histories was rewritten."),
     Code.ROLLBACK: ("An outside holder saw events that a restart later removed from the log.", "Acknowledged history is missing. Ask about the restart."),
