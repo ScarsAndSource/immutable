@@ -22,17 +22,18 @@ def test_full_pipeline_e2e():
         server = ImmutableWebServer(host="127.0.0.1", port=0, root_dir=Path(tmp))
         server.start()
         base = f"http://127.0.0.1:{server.port}"
+        opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor())
 
         try:
             # 1. Check web UI root and assets
-            with urllib.request.urlopen(f"{base}/", timeout=5) as r:
+            with opener.open(f"{base}/", timeout=5) as r:
                 assert r.status == 200
                 html = r.read().decode("utf-8")
                 assert "Archival Examination Ledger" in html
                 assert "Before you begin" in html
 
             # 2. Get active student session
-            with urllib.request.urlopen(f"{base}/api/student/session", timeout=5) as r:
+            with opener.open(f"{base}/api/student/session", timeout=5) as r:
                 assert r.status == 200
                 ses = json.loads(r.read())
                 assert ses["ws_id"] == "STN-19"
@@ -49,7 +50,7 @@ def test_full_pipeline_e2e():
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=5) as r:
+            with opener.open(req, timeout=5) as r:
                 assert r.status == 200
                 save_res = json.loads(r.read())
                 assert save_res["ok"] is True
@@ -61,7 +62,7 @@ def test_full_pipeline_e2e():
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=5) as r:
+            with opener.open(req, timeout=5) as r:
                 assert r.status == 200
                 run_res = json.loads(r.read())
                 assert run_res["exit_code"] == 0
@@ -69,42 +70,42 @@ def test_full_pipeline_e2e():
 
             # 5. Create Checkpoint
             req = urllib.request.Request(f"{base}/api/student/checkpoint", data=b"{}", headers={"Content-Type": "application/json"}, method="POST")
-            with urllib.request.urlopen(req, timeout=5) as r:
+            with opener.open(req, timeout=5) as r:
                 assert r.status == 200
                 cp_res = json.loads(r.read())
                 assert "merkle_root" in cp_res
 
             # 6. Flush batches to witness
             req = urllib.request.Request(f"{base}/api/student/flush", data=b"{}", headers={"Content-Type": "application/json"}, method="POST")
-            with urllib.request.urlopen(req, timeout=5) as r:
+            with opener.open(req, timeout=5) as r:
                 assert r.status == 200
                 flush_res = json.loads(r.read())
                 assert "sealed_batches" in flush_res
 
             # 7. Final submit exam
             req = urllib.request.Request(f"{base}/api/student/submit", data=b"{}", headers={"Content-Type": "application/json"}, method="POST")
-            with urllib.request.urlopen(req, timeout=5) as r:
+            with opener.open(req, timeout=5) as r:
                 assert r.status == 200
                 receipt = json.loads(r.read())
                 assert receipt["token"].startswith("IMR1.")
                 assert receipt["standing"]["code"] != "UNKNOWN"
 
             # 8. Check receipt retrieval
-            with urllib.request.urlopen(f"{base}/api/student/receipt", timeout=5) as r:
+            with opener.open(f"{base}/api/student/receipt", timeout=5) as r:
                 assert r.status == 200
                 rec_check = json.loads(r.read())
                 assert rec_check["token"].startswith("IMR1.")
                 assert rec_check["standing"]["code"] != "UNKNOWN"
 
             # 9. Assessor audit case verification
-            with urllib.request.urlopen(f"{base}/api/assessor/case", timeout=5) as r:
+            with opener.open(f"{base}/api/assessor/case", timeout=5) as r:
                 assert r.status == 200
                 case = json.loads(r.read())
                 assert case["body"]["summary"]["sessions"] >= 1
                 assert case["body"]["sessions"][0]["verdict"] in ("ANCHORED", "SELF_CONSISTENT_ONLY")
 
             # 10. Witness LAN report
-            with urllib.request.urlopen(f"{base}/api/witness/report", timeout=5) as r:
+            with opener.open(f"{base}/api/witness/report", timeout=5) as r:
                 assert r.status == 200
                 wit = json.loads(r.read())
                 assert wit["witness"] == "W01"
@@ -116,7 +117,7 @@ def test_full_pipeline_e2e():
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=10) as r:
+            with opener.open(req, timeout=10) as r:
                 assert r.status == 200
                 tl_res = json.loads(r.read())
                 assert tl_res["outcome"] == "DETECTED"

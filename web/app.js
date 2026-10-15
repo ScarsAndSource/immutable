@@ -100,9 +100,11 @@ async function api(path, options = {}) {
     if (!res.ok) {
       throw new Error(`API ${res.status}: ${await res.text()}`);
     }
+    document.body.dataset.backend = "up";
     return await res.json();
   } catch (err) {
-    console.warn("Backend unavailable, using fallback:", err.message);
+    document.body.dataset.backend = "down";
+    console.warn("Backend unavailable:", err.message);
     return null;
   }
 }
@@ -243,18 +245,8 @@ function renderWorkstation(data) {
 }
 
 function renderFallbackWorkstation() {
-  const sampleEvents = [
-    { seq: 0, type: "SESSION_START", hash: "9a2f7c0142b58de1", wall_ms: 1729768000000, data: { agent_ver: "im-agent/0.1" } },
-    { seq: 1, type: "BOOT", hash: "f48c3b1092e47a55", wall_ms: 1729768001000, data: { reason: "start" } },
-    { seq: 2, type: "FILE_SAVE", hash: "8f3ac99241b0d77e", wall_ms: 1729768002000, data: { path: "solution.py", size: 218 } },
-    { seq: 3, type: "FILE_SAVE", hash: "d718b5219e230fa4", wall_ms: 1729768002500, data: { path: "test_cases.py", size: 312 } },
-    { seq: 4, type: "CHECKPOINT", hash: "01e4a3194be738c1", wall_ms: 1729768030000, data: { upto_seq: 3 } },
-  ];
-  renderEventsLedger(sampleEvents);
-  renderFilesList([
-    { path: "solution.py", size: 218, sha256: "8f3ac99241b0d77e102cb891b972e3a1f49c00de4a3194be" },
-    { path: "test_cases.py", size: 312, sha256: "d718b5219e230fa4bb0082c4711a3b1945f8e0d9b4c023aa" },
-  ]);
+  renderEventsLedger([]);
+  renderFilesList([]);
 }
 
 function renderFilesList(files) {
@@ -269,7 +261,7 @@ function renderFilesList(files) {
       isSelected ? "border-primary bg-surface-container" : "border-surface-container-highest hover:bg-surface-container-low"
     }`;
     item.onclick = () => selectFile(f.path);
-    item.innerHTML = `
+    item.innerHTML = html`
       <div class="flex flex-col min-w-0 pr-2">
         <span class="font-mono-code text-[12px] font-semibold text-primary truncate">${f.path}</span>
         <span class="font-mono-code text-[10px] text-on-surface-variant truncate">${f.sha256 ? f.sha256.slice(0, 16) + "…" : ""}</span>
@@ -300,7 +292,7 @@ function renderEventsLedger(events) {
                    ev.data?.manifest_sha256 ? `manifest: ${ev.data.manifest_sha256.slice(0, 8)}…` :
                    ev.data?.merkle_root ? `root: ${ev.data.merkle_root.slice(0, 8)}…` : "";
 
-    row.innerHTML = `
+    row.innerHTML = html`
       <div class="flex items-center justify-between gap-2">
         <div class="flex items-center gap-2">
           <span class="font-mono-code text-[11px] font-bold text-primary">#${String(ev.seq).padStart(4, "0")}</span>
@@ -468,7 +460,13 @@ async function loadReceipt() {
   if (digest) digest.value = r.token;
   const qr = document.getElementById("receipt-qr");
   const miss = document.getElementById("receipt-qr-missing");
-  if (qr) qr.innerHTML = r.qr_svg || "";          // SVG comes from our own server
+  if (qr) {
+    if (r.qr_svg) {
+      qr.innerHTML = html`${raw(r.qr_svg)}`;
+    } else {
+      qr.innerHTML = "";
+    }
+  }
   if (miss) miss.classList.toggle("hidden", !!r.qr_svg);
 }
 
@@ -505,7 +503,7 @@ async function loadAssessorCase() {
   const s = b.summary || {};
   const ses = b.sessions?.[0] || {};
 
-  container.innerHTML = `
+  container.innerHTML = html`
     <!-- Top Summary Banner -->
     <div class="p-6 border border-surface-container-highest bg-surface-container-low rounded-sm flex flex-col gap-4">
       <div class="flex items-center justify-between pb-3 border-b border-surface-container-highest">
@@ -630,11 +628,11 @@ async function loadAssessorCase() {
 function renderFallbackAssessor() {
   const container = document.getElementById("assessor-content-area");
   if (!container) return;
-  container.innerHTML = `
+  container.innerHTML = html`
     <div class="p-6 border border-surface-container-highest bg-surface-container-low rounded-sm">
-      <div class="font-headline text-[18px] text-primary">Case Store Reconciled: 1 Session</div>
-      <div class="font-mono-code text-[11px] text-[#2F6B4F] mt-1 font-semibold">[VERDICT: ANCHORED · ASSURANCE A2 · 0 TAMPER FINDINGS]</div>
-      <p class="font-body-md text-[13px] text-on-surface-variant mt-2">All batches are self-consistent and corroborated by LAN Witness W01.</p>
+      <div class="font-headline text-[18px] text-primary">Assessor Store Offline</div>
+      <div class="font-mono-code text-[11px] text-error mt-1 font-semibold">[BACKEND DISCONNECTED]</div>
+      <p class="font-body-md text-[13px] text-on-surface-variant mt-2">Cannot reach the local evidence server. Ensure web_console.py is running.</p>
     </div>
   `;
 }
@@ -666,7 +664,7 @@ async function loadTamperLab() {
   allScenarios.forEach(sc => {
     const row = document.createElement("div");
     row.className = "p-3.5 border border-surface-container-highest bg-surface rounded-sm flex items-center justify-between gap-4 hover:bg-surface-container-low transition-colors";
-    row.innerHTML = `
+    row.innerHTML = html`
       <div class="flex items-center gap-3 min-w-0">
         <span class="font-mono-code text-[12px] font-bold text-primary w-10">${sc.id}</span>
         <span class="font-mono-code text-[10px] uppercase px-1.5 py-0.5 border border-outline-variant/60 text-on-surface-variant bg-surface-container rounded-sm shrink-0">${sc.group}</span>
@@ -687,7 +685,7 @@ async function runScenarioTrial(id) {
   const resultCard = document.getElementById("tamperlab-live-result");
   if (!resultCard) return;
   resultCard.classList.remove("hidden");
-  resultCard.innerHTML = `<div class="p-6 text-center font-mono-code text-[11px] text-on-surface-variant">Running simulated trial for scenario ${id}...</div>`;
+  resultCard.innerHTML = html`<div class="p-6 text-center font-mono-code text-[11px] text-on-surface-variant">Running simulated trial for scenario ${id}...</div>`;
 
   const res = await api("/api/tamperlab/run", {
     method: "POST",
@@ -705,7 +703,7 @@ async function runScenarioTrial(id) {
   };
 
   const isMatched = trial.outcome === trial.expected;
-  resultCard.innerHTML = `
+  resultCard.innerHTML = html`
     <div class="p-5 border ${isMatched ? "border-[#2F6B4F]" : "border-error"} bg-surface-container-low rounded-sm flex flex-col gap-3">
       <div class="flex items-center justify-between pb-2 border-b border-surface-container-highest">
         <div class="flex items-center gap-2">
@@ -749,7 +747,7 @@ async function loadWitnessReport() {
     refusals: []
   };
 
-  container.innerHTML = `
+  container.innerHTML = html`
     <div class="p-6 border border-surface-container-highest bg-surface-container-low rounded-sm flex flex-col gap-5">
       <div class="flex items-center justify-between pb-3 border-b border-surface-container-highest">
         <div>

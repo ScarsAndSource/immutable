@@ -1,52 +1,67 @@
 #!/usr/bin/env python3
-"""tools/web_console.py: Launch the Immutable Web Console and API service.
+"""tools/web_console.py: launch the Immutable web console.
 
-Usage:
-  python tools/web_console.py [--host 127.0.0.1] [--port 8000] [--open]
+  python tools/web_console.py [--mode demo|exam] [--port 8000] [--dir DIR] [--open]
+
+demo  one process playing every role (student, witness, assessor, tamper lab)
+exam  student pages only; assessor, witness and tamper-lab endpoints refuse
+
+The console is for loopback only. --allow-remote exists for a locked-down rehearsal
+network and is not recommended: the console runs student code.
 """
 import argparse
+import ipaddress
 import sys
 import webbrowser
 from pathlib import Path
 
-# Add src/ and repo root
 _ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_ROOT / "src"))
 sys.path.insert(0, str(_ROOT))
 
-from immutable.server import ImmutableWebServer
+from immutable.server import ImmutableWebServer  # noqa: E402
+
+
+def _loopback(host: str) -> bool:
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Immutable Web Console & API Service")
-    parser.add_argument("--host", default="127.0.0.1", help="Host to bind (default: 127.0.0.1)")
-    parser.add_argument("--port", type=int, default=8000, help="Port to listen on (default: 8000)")
-    parser.add_argument("--dir", default=None, help="Working directory for evidence and session data")
-    parser.add_argument("--open", action="store_true", help="Automatically open browser")
-    args = parser.parse_args()
+    ap = argparse.ArgumentParser(description="Immutable web console")
+    ap.add_argument("--host", default="127.0.0.1")
+    ap.add_argument("--port", type=int, default=8000)
+    ap.add_argument("--dir", default=None, help="working directory for evidence and session data")
+    ap.add_argument("--mode", choices=("demo", "exam"), default="demo")
+    ap.add_argument("--open", action="store_true", help="open the browser")
+    ap.add_argument("--allow-remote", action="store_true", help="permit a non-loopback --host")
+    a = ap.parse_args()
 
-    root_dir = Path(args.dir) if args.dir else None
-    server = ImmutableWebServer(host=args.host, port=args.port, root_dir=root_dir)
-    url = f"http://{args.host}:{server.port}"
+    if not _loopback(a.host) and not a.allow_remote:
+        print(f"refusing to bind {a.host}: the console runs student code. "
+              "Use 127.0.0.1, or pass --allow-remote if you really mean it.", file=sys.stderr)
+        return 2
 
-    print(f"=== Immutable Web Console ===")
-    print(f"Listening on: {url}")
-    print(f"Candidate Workspace, Live Ledger, Assessor Audit, and Tamper Lab active.")
-    print("Press Ctrl+C to terminate.")
-
-    if args.open:
+    server = ImmutableWebServer(host=a.host, port=a.port,
+                                root_dir=Path(a.dir) if a.dir else None, mode=a.mode)
+    url = f"http://{a.host}:{server.port}"
+    print(f"Immutable console ({a.mode} mode): {url}")
+    print("Open that exact address. Other hosts and other sites are refused. Ctrl+C to stop.")
+    if a.open:
         try:
             webbrowser.open(url)
         except Exception:
             pass
-
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\nShutting down Immutable Web Console...")
+        print("\nshutting down")
     finally:
         server.shutdown()
-
     return 0
 
 

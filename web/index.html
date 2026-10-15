@@ -63,6 +63,9 @@
   </style>
 </head>
 <body class="bg-surface text-on-surface font-body-md min-h-screen flex flex-col antialiased">
+  <div id="backend-down-banner" class="hidden bg-[#8C1D18] text-[#FFFFFF] py-2 px-4 text-center font-mono-code text-[11px] font-bold uppercase tracking-wider sticky top-0 z-[60]">
+    Backend Disconnected · Live API Unreachable
+  </div>
 
   <!-- Universal Archival Header & View Switcher -->
   <header class="fixed top-0 inset-x-0 z-50 bg-surface/95 backdrop-blur-md border-b border-surface-container-highest no-print">
@@ -534,6 +537,7 @@ if __name__ == "__main__":
     <span id="toast-message">Action recorded</span>
   </aside>
 
+  <script src="safe.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

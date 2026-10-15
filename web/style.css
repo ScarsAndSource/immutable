@@ -173,3 +173,8 @@ body {
 /* Receipt QR code container */
 .receipt-qr { background: #fff; padding: .5rem; }
 .receipt-qr svg { display: block; width: 18rem; max-width: 100%; height: auto; }
+
+/* Visible failure banner */
+body[data-backend="down"] #backend-down-banner {
+  display: block !important;
+}

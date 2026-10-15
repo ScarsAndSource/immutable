@@ -21,7 +21,9 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from . import anchor as anchor_mod, canon, hashing, keys, receipt as receipt_mod
+import traceback
+from . import anchor as anchor_mod, canon, hashing, keys, receipt as receipt_mod, websec
+from .policy import is_relpath
 from .agent import Agent, AgentError
 from .clockcheck import ClockPolicy
 from .courier import Courier
@@ -239,8 +241,13 @@ class ImmutableService:
         with self.lock:
             if not self.agent:
                 raise AgentError("Session not initialized")
-            target = (self.workspace_dir / rel_path).resolve()
-            if not str(target).startswith(str(self.workspace_dir.resolve())):
+            if not is_relpath(rel_path):
+                raise ValueError("that file name is not allowed")
+            if len(content.encode("utf-8")) > websec.MAX_FILE_BYTES:
+                raise ValueError("file too large for the editor")
+            root = self.workspace_dir.resolve()
+            target = (root / rel_path).resolve()
+            if not target.is_relative_to(root):
                 raise ValueError("Path escapes workspace")
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(content, encoding="utf-8")
@@ -251,6 +258,8 @@ class ImmutableService:
         with self.lock:
             if not self.agent:
                 raise AgentError("Session not initialized")
+            if not is_relpath(rel_path):
+                raise ValueError("that file name is not allowed")
             res = run_python(self.agent, rel_path)
             if self.courier:
                 self.courier.pump_once()
@@ -419,41 +428,63 @@ class ImmutableService:
 
 
 class WebHandler(BaseHTTPRequestHandler):
-    server_version = "ImmutableConsole/1.0"
+    timeout = 15              # drop stalled connections
+    server_version = "Immutable"
+    sys_version = ""
+    _STATIC_OK = {".html", ".js", ".css", ".woff2", ".svg", ".png", ".ico", ".json", ".txt"}
+    _MIME = {".woff2": "font/woff2", ".js": "text/javascript; charset=utf-8",
+             ".css": "text/css; charset=utf-8", ".html": "text/html; charset=utf-8"}
 
     def log_message(self, format: str, *args: Any) -> None:
         # Keep console output clean
         pass
 
-    def _json(self, status: int, data: Any) -> None:
+    def _security_headers(self) -> None:
+        for k, v in self.server.sec_headers.items():
+            self.send_header(k, v)
+
+    def _json(self, status: int, data: Any, retry_after: int = 0) -> None:
         body = json.dumps(data, indent=2, sort_keys=True).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Cache-Control", "no-store")
+        if retry_after:
+            self.send_header("Retry-After", str(retry_after))
+        self._security_headers()
         self.end_headers()
         self.wfile.write(body)
 
-    def do_OPTIONS(self) -> None:
-        self.send_response(204)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
-        self.end_headers()
+    def _guard(self) -> bool:
+        verdict = websec.check(self.server.sec, self.command, urlparse(self.path).path, self.headers)
+        if verdict is None:
+            return True
+        status, msg, retry = verdict
+        self._json(status, {"error": msg}, retry)
+        return False
+
+    def do_OPTIONS(self) -> None:          # no CORS: the page is same-origin
+        self._json(405, {"error": "method not allowed"})
 
     def _read_json(self) -> dict[str, Any]:
         n = self.headers.get("Content-Length", "0")
-        if not n.isdigit() or int(n) == 0:
+        if not n.isdigit():
             return {}
-        raw = self.rfile.read(int(n))
+        n = int(n)
+        if n > websec.MAX_BODY:
+            raise websec.TooLarge("request body too large")
+        if n == 0:
+            return {}
+        raw = self.rfile.read(n)
         try:
-            return json.loads(raw.decode("utf-8"))
-        except Exception:
+            obj = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, ValueError, RecursionError):
             return {}
+        return obj if isinstance(obj, dict) else {}
 
     def do_GET(self) -> None:
+        if not self._guard():
+            return
         parsed = urlparse(self.path)
         path = parsed.path
         service: ImmutableService = self.server.service
@@ -496,10 +527,17 @@ class WebHandler(BaseHTTPRequestHandler):
         self._serve_static(path)
 
     def do_POST(self) -> None:
+        if not self._guard():
+            return
         parsed = urlparse(self.path)
         path = parsed.path
         service: ImmutableService = self.server.service
-        payload = self._read_json()
+        try:
+            payload = self._read_json()
+        except websec.TooLarge:
+            self.close_connection = True
+            self._json(413, {"error": "request body too large"})
+            return
 
         try:
             if path == "/api/student/init":
@@ -554,45 +592,48 @@ class WebHandler(BaseHTTPRequestHandler):
 
             self._json(404, {"error": "unknown_endpoint", "path": path})
 
-        except Exception as exc:
-            self._json(500, {"error": str(exc)})
+        except (ValueError, AgentError) as exc:
+            self._json(400, {"error": str(exc)})
+        except Exception:
+            traceback.print_exc(file=sys.stderr)
+            self._json(500, {"error": "internal error"})
 
     def _serve_static(self, path: str) -> None:
-        # Default to index.html
-        if path == "/" or path == "":
+        if path in ("/", ""):
             path = "/index.html"
-
-        # Web assets directory
-        web_dir = Path(__file__).resolve().parent.parent.parent / "web"
-        clean_path = path.lstrip("/")
-        target_file = (web_dir / clean_path).resolve()
-
-        # Prevent traversal
-        if not str(target_file).startswith(str(web_dir.resolve())) or not target_file.is_file():
-            # If not found in web dir, try index.html for SPA routing
-            target_file = web_dir / "index.html"
-            if not target_file.is_file():
-                self.send_error(404, f"File not found: {path}")
+        web_dir = (Path(__file__).resolve().parent.parent.parent / "web").resolve()
+        target = (web_dir / path.lstrip("/")).resolve()
+        ok = (target.is_relative_to(web_dir) and target.is_file()
+              and target.suffix in self._STATIC_OK
+              and not any(p.startswith(".") for p in target.relative_to(web_dir).parts))
+        if not ok:
+            target = web_dir / "index.html"          # keep the SPA fallback
+            if not target.is_file():
+                self.send_error(404)
                 return
-
-        ctype, _ = mimetypes.guess_type(str(target_file))
-        ctype = ctype or "application/octet-stream"
-        raw = target_file.read_bytes()
-
+        raw = target.read_bytes()
+        ctype = self._MIME.get(target.suffix) or mimetypes.guess_type(str(target))[0] or "application/octet-stream"
         self.send_response(200)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(raw)))
         self.send_header("Cache-Control", "no-cache")
+        self._security_headers()
+        if target.name == "index.html":
+            self.send_header("Set-Cookie", websec.session_cookie(self.server.sec.token))
         self.end_headers()
         self.wfile.write(raw)
 
 
 class ImmutableWebServer:
-    def __init__(self, host: str = "127.0.0.1", port: int = DEFAULT_PORT, root_dir: Path | None = None):
+    def __init__(self, host: str = "127.0.0.1", port: int = DEFAULT_PORT,
+                 root_dir: Path | None = None, mode: str = "demo"):
         self.service = ImmutableService(root_dir=root_dir)
         self.httpd = ThreadingHTTPServer((host, port), WebHandler)
         self.httpd.daemon_threads = True
         self.httpd.service = self.service
+        self.httpd.sec = websec.Sec.create(host, self.httpd.server_address[1], mode)
+        self.httpd.sec_headers = websec.security_headers(
+            report_only=bool(os.environ.get("IMMUTABLE_CSP_REPORT_ONLY")))
         self._thread: threading.Thread | None = None
 
     @property

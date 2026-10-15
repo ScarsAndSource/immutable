@@ -61,31 +61,32 @@ def test_http_api_endpoints():
         server = ImmutableWebServer(host="127.0.0.1", port=0, root_dir=Path(tmp))
         server.start()
         base_url = f"http://127.0.0.1:{server.port}"
+        opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor())
         try:
-            # GET /api/status
-            with urllib.request.urlopen(f"{base_url}/api/status", timeout=5) as r:
-                assert r.status == 200
-                data = json.loads(r.read())
-                assert data["status"] == "online"
-
-            # GET / (static index.html)
-            with urllib.request.urlopen(f"{base_url}/", timeout=5) as r:
+            # GET / (static index.html) - establishes session cookie
+            with opener.open(f"{base_url}/", timeout=5) as r:
                 assert r.status == 200
                 html = r.read().decode("utf-8")
                 assert "Immutable" in html
                 assert "Before you begin" in html
 
+            # GET /api/status
+            with opener.open(f"{base_url}/api/status", timeout=5) as r:
+                assert r.status == 200
+                data = json.loads(r.read())
+                assert data["status"] == "online"
+
             # GET /style.css
-            with urllib.request.urlopen(f"{base_url}/style.css", timeout=5) as r:
+            with opener.open(f"{base_url}/style.css", timeout=5) as r:
                 assert r.status == 200
                 assert "font-style: normal" in r.read().decode("utf-8")
 
             # GET /app.js
-            with urllib.request.urlopen(f"{base_url}/app.js", timeout=5) as r:
+            with opener.open(f"{base_url}/app.js", timeout=5) as r:
                 assert r.status == 200
 
             # GET /api/student/session
-            with urllib.request.urlopen(f"{base_url}/api/student/session", timeout=5) as r:
+            with opener.open(f"{base_url}/api/student/session", timeout=5) as r:
                 assert r.status == 200
                 data = json.loads(r.read())
                 assert data["ws_id"] == "STN-19"
@@ -98,7 +99,7 @@ def test_http_api_endpoints():
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=5) as r:
+            with opener.open(req, timeout=5) as r:
                 assert r.status == 200
                 res = json.loads(r.read())
                 assert res["exit_code"] == 0
@@ -110,7 +111,7 @@ def test_http_api_endpoints():
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=10) as r:
+            with opener.open(req, timeout=10) as r:
                 assert r.status == 200
                 res = json.loads(r.read())
                 assert res["outcome"] == "CLEAN"
