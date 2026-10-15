@@ -13,12 +13,14 @@ ZERO = "0" * 64                      # genesis prev
 
 DOMAINS = frozenset({
     "event", "batch", "merkle.leaf", "merkle.node", "merkle.empty",
-    "key", "checkpoint", "roster", "receipt", "cosign", "transfer",
+    "key", "checkpoint", "roster", "receipt", "cosign", "transfer", "enroll",
 })
 
 EVENT, BATCH, KEY = "event", "batch", "key"
 CHECKPOINT, ROSTER, RECEIPT = "checkpoint", "roster", "receipt"
 COSIGN, TRANSFER = "cosign", "transfer"
+ENROLL = "enroll"
+
 
 
 def tagged(domain: str, data: bytes) -> bytes:

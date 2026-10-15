@@ -81,7 +81,26 @@ shown to a witness. Any write or fsync error fail-stops the log until recovery.
 Event order guarantees: SESSION_START, BOOT first. A save always precedes the
 RUN_START that uses it (the hash is of the exact bytes that executed). Submit is
 FILE_SAVE* (if anything changed), CHECKPOINT, SUBMIT, SESSION_END. A RUN_START
-without a RUN_END means the process died mid-run.
 `manifest_sha256` is plain SHA-256 of the manifest bytes.
+
+## 9. Identity
+Roster file = canonical `{"body": B, "sig": hex}`, sig = Ed25519 by `B.assessor`
+over `tagged("roster", canonical(B))`. B: `v, exam_id, issued_ms, paper_sha256,
+assessor, seats[{ws_id,pub,candidate|null}], witnesses[{witness_id,pub}]`.
+Seats sorted by ws_id, witnesses by id, no duplicates. The assessor key, every seat
+key and every witness key are pairwise distinct. Files must be canonical so the
+roster id (`sha256_hex(file bytes)`, recorded as `SESSION_START.roster_sha256`) has
+one representation. Candidates are pseudonyms; real identity never appears.
+
+Enrollment request = canonical `{"body": {v, exam_id, ws_id, pub}, "sig"}`, sig by
+`pub` under domain `enroll` (proof of possession).
+
+Transfer statement S = `{v, exam_id, session_id, from_ws_id, from_last_seq,
+from_head, to_ws_id, to_pub}`; token = `{"body": S, "sig"}` by the assessor, domain
+`transfer`. The new chain's event 2 is TRANSFER `{from_ws_id, from_last_seq,
+from_head, assessor_sig}`; `to_ws_id` is the event's ws_id and `to_pub` the batch
+signer. A candidate follows the transfer; the old seat is retired and must not have
+events past `from_last_seq`, and its event at that seq must hash to `from_head`.
+
 
 

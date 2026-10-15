@@ -43,6 +43,11 @@ Every attack test links back to a row ID here. Update this file before code.
 | T13 | Restore-on-reboot wipes the WAL | X2 X5 | A2 | Yes | `WalMissing` on a seat that already had a session. Persistent evidence volume required. |
 | T14 | Student kills the agent, or runs it as the same OS user and reads the key | X1 | A2 | Partly | Silence shows as a heartbeat gap. Unanchored tail is reported (T3). Separate OS user recommended. |
 | T15 | Student keeps work in files we cannot fingerprint (symlink, over 2 MiB, odd name) | X1 | A1 | Visible to the student | Listed in `skipped` and shown in the UI, never silently dropped. They are absent from the manifest by design. |
+| T16 | One machine image (and key) cloned across seats | X2 | A3 | Yes | DUPLICATE_KEY. Keys are generated at enrollment, never in the image. |
+| T17 | Student moves to a better machine mid-exam without authorisation | X1 | A3 | Yes | A chain on an unenrolled seat or key is UNKNOWN_SEAT / KEY_NOT_ENROLLED; a TRANSFER without the assessor's signature for this exact seat and key is TRANSFER_INVALID. |
+| T18 | Transfer used to reset or hide history | X1 X2 | A2 | Yes | The signed from_last_seq and from_head pin where the old chain ends. Writing past it, a different head, or a missing tail is TRANSFER_MISMATCH. |
+| T19 | Assessor key stolen or a roster swapped before the exam | X4 | A3 | No | Out of scope (stated). Mitigation is organisational: fingerprint printed on the envelope, roster id recorded in every SESSION_START so a late swap is visible as two different roster ids. |
+
 
 
 
