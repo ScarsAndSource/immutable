@@ -90,6 +90,75 @@ const setText = (id, v) => { const el = $(id); if (el) el.textContent = v; };
 const badge = (text, kind = "") => html`<span class="badge ${kind}">${text}</span>`;
 const offline = (title) => html`<div class="card"><h2 class="serif">${title}</h2><p class="mute">Cannot reach the evidence server. Make sure web_console.py is running.</p></div>`;
 
+// ---------------------------------------------------------------------------
+// DEMO / MOCK DATA
+// These snapshots mirror the exact JSON shape the real APIs return.
+// They are used only when the server cannot be reached (API returns null).
+// Nothing here touches the witness, the store, or any log.
+// ---------------------------------------------------------------------------
+const _now = () => Date.now();
+
+const MOCK_WITNESS = () => ({
+  witness: "W01",
+  exam_id: "EXAM-2024-P1",
+  roster_id: "demo-roster-0000",
+  now_ms: _now(),
+  seats: [
+    { session: "S8821", ws: "STN-19", candidate: "CNTR-8821", enrolled: true,
+      events_held: 47, held_upto: 46, contacts: 112,
+      first_seen_ms: _now() - 5400_000, last_seen_ms: _now() - 3_000,
+      longest_contact_gap_ms: 18_000 },
+    { session: "S8822", ws: "STN-20", candidate: "CNTR-8822", enrolled: true,
+      events_held: 31, held_upto: 30, contacts: 87,
+      first_seen_ms: _now() - 5200_000, last_seen_ms: _now() - 8_000,
+      longest_contact_gap_ms: 25_000 },
+    { session: "S8823", ws: "STN-21", candidate: "CNTR-8823", enrolled: true,
+      events_held: 58, held_upto: 57, contacts: 130,
+      first_seen_ms: _now() - 5390_000, last_seen_ms: _now() - 2_000,
+      longest_contact_gap_ms: 12_000 },
+  ],
+  refusals: [],
+});
+
+const MOCK_ASSESSOR = () => ({
+  hash: "a3f8d2c1b5e09a7f" + "0".repeat(48),
+  rendered_text: "[demo] Assessor case — no real evidence loaded.\n\nThis is simulated output shown when the server is unreachable.",
+  body: {
+    spec: "FORMAT_V2",
+    verifier: "0.9.0",
+    exam_id: "EXAM-2024-P1",
+    summary: { sessions: 1, anchored: 1, self_consistent_only: 0, tamper_suspected: 0 },
+    sessions: [{
+      session_id: "S8821",
+      ws_id: "STN-19",
+      assurance: "A2",
+      verdict: "CLEAN",
+      chains: [{ proven: [
+        { text: "Chain is unbroken: all 47 events form a single hash chain from seq 1 to 46." },
+        { text: "Witness W01 co-signed the head at seq 46 at 09:41:22 (witness clock)." },
+        { text: "Receipt matches: the student's token covers the same final head." },
+      ], unprovable: [
+        { text: "Who was sitting at the machine. Immutable records actions, not identity." },
+        { text: "Whether wall-clock times are accurate; they are the workstation's claim." },
+      ]}],
+      findings: [],
+    }],
+  },
+});
+
+const MOCK_SCENARIOS = [
+  { id: "C0", group: "Control", title: "Unmodified honest session",         expected: "CLEAN"    },
+  { id: "D1", group: "Delete",  title: "Middle batch deleted",               expected: "DETECTED" },
+  { id: "D2", group: "Delete",  title: "First batch deleted",                expected: "DETECTED" },
+  { id: "D3", group: "Delete",  title: "Last batch deleted",                 expected: "DETECTED" },
+  { id: "R1", group: "Roll",    title: "Last event rolled back",             expected: "DETECTED" },
+  { id: "F1", group: "Fork",    title: "Two different batches at same seq",  expected: "DETECTED" },
+  { id: "S1", group: "Swap",    title: "Seat key swapped after enroll",      expected: "DETECTED" },
+  { id: "T1", group: "Time",    title: "Wall clock set 2 hours back",        expected: "DETECTED" },
+  { id: "P1", group: "Power",   title: "Power cut at mid-session",           expected: "CLEAN"    },
+];
+
+
 // --- API ---
 async function api(path, options = {}) {
   try {
@@ -331,8 +400,9 @@ async function checkReceipt() {
 async function loadAssessorCase() {
   const box = $("assessor-content-area");
   box.innerHTML = html`<p class="mute">Verifying signatures…</p>`;
-  const data = await api("/api/assessor/case");
-  if (!data || !data.body) { box.innerHTML = html`${offline("Assessor store offline")}`; return; }
+  let data = await api("/api/assessor/case");
+  const isMock = !data || !data.body;
+  if (isMock) data = MOCK_ASSESSOR();
 
   const b = data.body, s = b.summary || {}, ses = b.sessions?.[0] || {};
   const suspect = ses.verdict === "TAMPER_SUSPECTED";
@@ -346,9 +416,10 @@ async function loadAssessorCase() {
   const flagged = (ses.findings || []).filter((f) => f.severity === "suspect").map((f) => `[${f.code}] event ${f.seq}: ${f.detail}`);
 
   box.innerHTML = html`
+    ${isMock ? html`<div class="card" style="background:var(--c-sim,#f5f0e8);border-left:3px solid #c8a800;padding:10px 16px"><b>Demo data</b> — no real evidence loaded. This is a simulated assessor case.</div>` : ""}
     <div class="card">
       <div class="between">
-        <div><div class="eyebrow">Case</div><h2>${b.exam_id}</h2></div>
+        <div><div class="eyebrow">Case${isMock ? " · demo" : ""}</div><h2>${b.exam_id}</h2></div>
         <span class="mono small mute">spec ${b.spec} · verifier ${b.verifier} · ${data.hash ? data.hash.slice(0, 12) : ""}…</span>
       </div>
       <div class="stats">
@@ -373,14 +444,18 @@ async function loadAssessorCase() {
 }
 
 // --- Tamper lab ---
+let _tamperlabIsMock = false;
 async function loadTamperLab() {
   const list = $("tamperlab-scenarios-list");
   if (!allScenarios.length) {
     const sc = await api("/api/tamperlab/scenarios");
-    if (sc && sc.length) allScenarios = sc;
+    if (sc && sc.length) { allScenarios = sc; _tamperlabIsMock = false; }
+    else { allScenarios = MOCK_SCENARIOS; _tamperlabIsMock = true; }
   }
   if (!allScenarios.length) { list.innerHTML = html`<p class="mute">Cannot reach the evidence server.</p>`; return; }
-  list.innerHTML = html`${allScenarios.map((sc) => html`
+  list.innerHTML = html`
+    ${_tamperlabIsMock ? html`<div style="background:var(--c-sim,#f5f0e8);border-left:3px solid #c8a800;padding:10px 16px;margin-bottom:8px;border-radius:6px"><b>Demo list</b> — the server is not running. Scenarios are shown but Run will report "server offline".</div>` : ""}
+    ${allScenarios.map((sc) => html`
     <div class="scn">
       <span class="id">${sc.id}</span>
       <span class="badge">${sc.group}</span>
@@ -395,7 +470,18 @@ async function runScenarioTrial(id) {
   card.classList.remove("hidden");
   card.innerHTML = html`<div class="card mute">Running ${id}…</div>`;
   const t = await api("/api/tamperlab/run", { method: "POST", body: JSON.stringify({ scenario_id: id, seed: 0 }) });
-  if (!t) { card.innerHTML = html`${offline("Trial failed")}`; return; }
+  if (!t) {
+    // Server offline: look up the expected outcome from the mock list so something useful shows.
+    const mock = MOCK_SCENARIOS.find((s) => s.id === id);
+    card.innerHTML = html`<div class="card">
+      <div class="between">
+        <h2>${id}${mock ? ": " + mock.title : ""}</h2>
+        <div class="gap">${badge(mock ? "Expect " + mock.expected : "Unknown")}${badge("Server offline", "bad")}</div>
+      </div>
+      <p class="mute small" style="margin-top:12px">The evidence server is not running. Start web_console.py and click Run again to execute this trial.</p>
+    </div>`;
+    return;
+  }
   const match = t.outcome === t.expected;
   const codes = t.suspect && t.suspect.length ? t.suspect.join(", ") : "none";
   card.innerHTML = html`
@@ -412,13 +498,15 @@ async function runScenarioTrial(id) {
 async function loadWitnessReport() {
   const box = $("witness-content-area");
   box.innerHTML = html`<p class="mute">Polling witness…</p>`;
-  const r = await api("/api/witness/report");
-  if (!r) { box.innerHTML = html`${offline("Witness unreachable")}`; return; }
+  let r = await api("/api/witness/report");
+  const isMock = !r;
+  if (isMock) r = MOCK_WITNESS();
   const seats = r.seats || [];
   const refused = r.refusals?.length || 0;
   box.innerHTML = html`
+    ${isMock ? html`<div class="card" style="background:var(--c-sim,#f5f0e8);border-left:3px solid #c8a800;padding:10px 16px"><b>Demo data</b> — the witness server is not running. This is a simulated snapshot.</div>` : ""}
     <div class="card">
-      <div class="between"><div><div class="eyebrow">Witness node</div><h2>${r.witness}</h2></div>${badge("Equivocation proof active", "ok")}</div>
+      <div class="between"><div><div class="eyebrow">Witness node${isMock ? " · demo" : ""}</div><h2>${r.witness}</h2></div>${badge("Equivocation proof active", "ok")}</div>
       <div class="stats" style="grid-template-columns:repeat(3,1fr)">
         <div class="stat"><span class="mute">Exam</span><b class="mono" style="font-size:15px">${r.exam_id}</b></div>
         <div class="stat"><span class="mute">Seats held</span><b class="serif">${seats.length}</b></div>
@@ -508,6 +596,7 @@ function openTeacher() {
     teacherCtl = window.TeacherBoard.mount(root, {
       apiPrefix: "/api/teacher",
       pollMs: 2000,
+      simToggle: true,   // show "Simulated class" toggle in demo mode
     });
   }
 }
