@@ -41,7 +41,7 @@ const I18N = {
     receipt_title: "Countersign // Folio",
     receipt_header: "Submitted",
     receipt_sub: "Permanent Ledger Submission",
-    receipt_footnote: "Keep this receipt safe. It allows independent archival verification against the ledger root.",
+    receipt_footnote: "Keep this receipt. If your result is ever questioned, the assessor can check it against the lab's records.",
     copy_slip: "Copy Slip",
     copied: "Copied ✓",
     print: "Print",
@@ -77,7 +77,7 @@ const I18N = {
     receipt_title: "काउंटरसाइन // फ़ोलियो",
     receipt_header: "जमा किया गया",
     receipt_sub: "स्थायी लेज़र प्रस्तुति",
-    receipt_footnote: "इस रसीद को सुरक्षित रखें। यह लेज़र रूट के विरुद्ध स्वतंत्र सत्यापन की अनुमति देती है।",
+    receipt_footnote: "इस रसीद को सुरक्षित रखें। परिणाम पर कभी सवाल उठे तो परीक्षक इसे प्रयोगशाला के रिकॉर्ड से मिलाकर जाँच सकता है।",
     copy_slip: "रसीद कॉपी करें",
     copied: "कॉपी हो गया ✓",
     print: "प्रिंट करें",
@@ -429,41 +429,64 @@ async function handleFinalSubmit() {
 }
 
 // --- Archival Receipt ---
+let currentReceipt = null;
+
+function slipText(r) {
+  return [
+    "IMMUTABLE RECEIPT",
+    `Exam ${r.exam_id}   Seat ${r.ws_id}   Candidate ${r.candidate}`,
+    `Events recorded: ${r.events}`,
+    `Final event: ${r.head_groups}`,
+    `Signed by this computer at ${r.signed_at} (its own clock)`,
+    `Receipt ID: ${r.receipt_id}`,
+    "",
+    r.token,   // keep last: the validator reads from IMR1. to the end
+  ].join("\n");
+}
+
 async function loadReceipt() {
-  let receipt = sessionData?.receipt;
-  if (!receipt) {
-    receipt = await api("/api/student/receipt");
+  let r = sessionData?.receipt;
+  if (!r || !r.token) r = await api("/api/student/receipt");
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  if (!r || !r.token) {
+    currentReceipt = null;
+    set("receipt-no", "№ —");
+    set("receipt-submitted-date", "Not submitted yet");
+    set("receipt-standing", "Nothing to show until you submit.");
+    return;
   }
-  if (!receipt || !receipt.folio_number) {
-    receipt = {
-      folio_number: "8821",
-      submitted_at: "24 Oct 2024 • 11:30:14 IST",
-      station_seat: "LAB-04 // STN-19",
-      session_code: "CNTR-8821-DELHI-T19",
-      cosignatures: "14 of 14",
-      witness_name: "Examiner #02 (Delhi Vault)",
-      chain_status: "Chain Intact",
-      digest_raw: "CNTR::SESSION:8821::STN:19::TS:1729769414::EVENTS:212::WITNESS:EX02::SIG:8f3ac99241b0d77e102cb891b972e3a1f49c00de4a3194be::CHAIN:VERIFIED",
-    };
-  }
+  currentReceipt = r;
+  set("receipt-no", "№ " + r.receipt_id);
+  set("receipt-id", r.receipt_id);
+  set("receipt-submitted-date", r.signed_at);
+  set("receipt-seat-val", r.ws_id);
+  set("receipt-events", String(r.events));
+  set("receipt-head", r.head_groups);
+  set("receipt-standing", r.standing.text);
+  set("receipt-seal", r.standing.code === "HELD_BY_WITNESS" ? "Held by witness" : "Signed by this computer");
+  const digest = document.getElementById("digest-raw");
+  if (digest) digest.value = r.token;
+  const qr = document.getElementById("receipt-qr");
+  const miss = document.getElementById("receipt-qr-missing");
+  if (qr) qr.innerHTML = r.qr_svg || "";          // SVG comes from our own server
+  if (miss) miss.classList.toggle("hidden", !!r.qr_svg);
+}
 
-  const seatEl = document.getElementById("receipt-seat-val");
-  if (seatEl) seatEl.textContent = receipt.station_seat;
-
-  const codeEl = document.getElementById("receipt-session-code");
-  if (codeEl) codeEl.textContent = receipt.session_code;
-
-  const dateEl = document.getElementById("receipt-submitted-date");
-  if (dateEl) dateEl.textContent = receipt.submitted_at;
-
-  const cosigEl = document.getElementById("receipt-cosig-val");
-  if (cosigEl) cosigEl.textContent = receipt.cosignatures;
-
-  const witnessEl = document.getElementById("receipt-witness-val");
-  if (witnessEl) witnessEl.textContent = receipt.witness_name;
-
-  const digestEl = document.getElementById("digest-raw");
-  if (digestEl) digestEl.value = receipt.digest_raw;
+async function checkReceipt() {
+  const out = document.getElementById("receipt-check-out");
+  const token = document.getElementById("receipt-check-input").value;
+  out.replaceChildren();
+  const res = await api("/api/receipt/check", { method: "POST", body: JSON.stringify({ token }) });
+  if (!res) return;
+  const add = (text, bold) => {
+    const li = document.createElement("li");
+    li.textContent = text;                         // textContent, never innerHTML
+    if (bold) li.style.fontWeight = "600";
+    out.appendChild(li);
+  };
+  for (const c of res.checks) add(`[${c.ok ? "PASS" : (c.required ? "FAIL" : "NOTE")}] ${c.text}`);
+  add(res.valid ? "[RECEIPT VALID]" : "[RECEIPT NOT VALID]", true);
+  add(res.limits);
 }
 
 // --- Assessor & Case Audit ---
@@ -806,15 +829,8 @@ function setupClipboardAndPrint() {
 
   if (copyBtn && digestRaw) {
     copyBtn.addEventListener("click", () => {
-      const textToCopy = "=== ARCHIVAL STUDENT RECEIPT ===\n" +
-        "Folio: 8821\n" +
-        "Status: Submitted (24 Oct 2024 • 11:30:14 IST)\n" +
-        "Session Code: CNTR-8821-DELHI-T19\n" +
-        "Events: 212 | Cosignatures: 14 | Chain: Intact\n" +
-        "Fingerprint: 8f3a c992 41b0 d77e 102c b891\n" +
-        "Witness: Verified & Countersigned by Examiner Seat #02\n" +
-        "Digest Payload: " + digestRaw.value + "\n" +
-        "=================================";
+      if (!currentReceipt) return;
+      const textToCopy = slipText(currentReceipt);
 
       navigator.clipboard.writeText(textToCopy).then(() => {
         if (copyText) copyText.textContent = I18N[currentLang].copied;
@@ -834,6 +850,15 @@ function setupClipboardAndPrint() {
       window.print();
     });
   }
+
+  const saveBtn = document.getElementById("save-btn");
+  if (saveBtn) saveBtn.addEventListener("click", () => {
+    if (!currentReceipt) return;
+    const url = URL.createObjectURL(new Blob([slipText(currentReceipt) + "\n"], { type: "text/plain" }));
+    const a = document.createElement("a");
+    a.href = url; a.download = `receipt-${currentReceipt.receipt_id}.txt`;
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  });
 }
 
 // --- Initialization ---

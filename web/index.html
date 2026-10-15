@@ -373,7 +373,7 @@ if __name__ == "__main__":
           <span class="material-symbols-outlined text-[16px]">receipt_long</span>
           <span class="font-mono-code uppercase tracking-widest text-[10px]">Archival Slip • Official Folio</span>
         </div>
-        <span class="font-mono-code text-[11px] text-on-surface-variant font-medium tracking-wider">№ 8821</span>
+        <span id="receipt-no" class="font-mono-code text-[11px] text-on-surface-variant font-medium tracking-wider">№ —</span>
       </div>
 
       <!-- Spacious Physical Receipt Container with Subtle Perforations -->
@@ -395,119 +395,35 @@ if __name__ == "__main__":
 
         <!-- Centered High-Fidelity Quiet QR Matrix -->
         <div class="p-4 bg-surface border border-surface-container-highest flex flex-col items-center justify-center my-1">
-          <svg aria-label="Cryptographic Proof QR Matrix" class="w-40 h-40 text-primary" fill="currentColor" role="img" viewBox="0 0 29 29">
-            <rect height="7" width="7" x="0" y="0"></rect>
-            <rect fill="#fef9f0" height="5" width="5" x="1" y="1"></rect>
-            <rect height="3" width="3" x="2" y="2"></rect>
-            <rect height="7" width="7" x="22" y="0"></rect>
-            <rect fill="#fef9f0" height="5" width="5" x="23" y="1"></rect>
-            <rect height="3" width="3" x="24" y="2"></rect>
-            <rect height="7" width="7" x="0" y="22"></rect>
-            <rect fill="#fef9f0" height="5" width="5" x="1" y="23"></rect>
-            <rect height="3" width="3" x="2" y="24"></rect>
-            <rect height="1" width="1" x="8" y="2"></rect>
-            <rect height="1" width="2" x="10" y="2"></rect>
-            <rect height="1" width="1" x="14" y="2"></rect>
-            <rect height="1" width="2" x="18" y="2"></rect>
-            <rect height="1" width="2" x="8" y="4"></rect>
-            <rect height="1" width="3" x="12" y="4"></rect>
-            <rect height="1" width="1" x="17" y="4"></rect>
-            <rect height="1" width="1" x="19" y="4"></rect>
-            <rect height="1" width="1" x="0" y="8"></rect>
-            <rect height="1" width="2" x="2" y="8"></rect>
-            <rect height="1" width="1" x="5" y="8"></rect>
-            <rect height="1" width="3" x="8" y="8"></rect>
-            <rect height="1" width="1" x="13" y="8"></rect>
-            <rect height="1" width="2" x="16" y="8"></rect>
-            <rect height="1" width="1" x="20" y="8"></rect>
-            <rect height="1" width="3" x="24" y="8"></rect>
-            <rect height="1" width="1" x="2" y="10"></rect>
-            <rect height="1" width="3" x="4" y="10"></rect>
-            <rect height="1" width="1" x="9" y="10"></rect>
-            <rect height="1" width="2" x="11" y="10"></rect>
-            <rect height="1" width="3" x="15" y="10"></rect>
-            <rect height="1" width="1" x="22" y="10"></rect>
-            <rect height="1" width="2" x="26" y="10"></rect>
-            <rect height="1" width="3" x="0" y="12"></rect>
-            <rect height="1" width="1" x="5" y="12"></rect>
-            <rect height="1" width="1" x="8" y="12"></rect>
-            <rect height="1" width="3" x="11" y="12"></rect>
-            <rect height="1" width="1" x="16" y="12"></rect>
-            <rect height="1" width="2" x="18" y="12"></rect>
-            <rect height="1" width="4" x="23" y="12"></rect>
-            <rect height="1" width="2" x="3" y="14"></rect>
-            <rect height="1" width="1" x="7" y="14"></rect>
-            <rect height="1" width="2" x="10" y="14"></rect>
-            <rect height="1" width="1" x="14" y="14"></rect>
-            <rect height="1" width="3" x="17" y="14"></rect>
-            <rect height="1" width="2" x="21" y="14"></rect>
-            <rect height="1" width="3" x="1" y="16"></rect>
-            <rect height="1" width="2" x="6" y="16"></rect>
-            <rect height="1" width="1" x="9" y="16"></rect>
-            <rect height="1" width="4" x="12" y="16"></rect>
-            <rect height="1" width="1" x="18" y="16"></rect>
-            <rect height="1" width="2" x="25" y="16"></rect>
-            <rect height="1" width="1" x="4" y="18"></rect>
-            <rect height="1" width="3" x="7" y="18"></rect>
-            <rect height="1" width="1" x="11" y="18"></rect>
-            <rect height="1" width="2" x="15" y="18"></rect>
-            <rect height="1" width="3" x="20" y="18"></rect>
-            <rect height="1" width="1" x="26" y="18"></rect>
-            <rect height="1" width="2" x="8" y="20"></rect>
-            <rect height="1" width="1" x="12" y="20"></rect>
-            <rect height="1" width="3" x="14" y="20"></rect>
-            <rect height="1" width="2" x="19" y="20"></rect>
-            <rect height="1" width="1" x="23" y="20"></rect>
-            <rect height="1" width="1" x="8" y="22"></rect>
-            <rect height="1" width="3" x="11" y="22"></rect>
-            <rect height="1" width="2" x="16" y="22"></rect>
-            <rect height="1" width="2" x="22" y="22"></rect>
-            <rect height="1" width="1" x="26" y="22"></rect>
-            <rect height="1" width="2" x="9" y="24"></rect>
-            <rect height="1" width="1" x="13" y="24"></rect>
-            <rect height="1" width="1" x="17" y="24"></rect>
-            <rect height="1" width="3" x="20" y="24"></rect>
-            <rect height="1" width="2" x="25" y="24"></rect>
-            <rect height="1" width="3" x="8" y="26"></rect>
-            <rect height="1" width="2" x="12" y="26"></rect>
-            <rect height="1" width="1" x="15" y="26"></rect>
-            <rect height="1" width="2" x="18" y="26"></rect>
-            <rect height="1" width="3" x="22" y="26"></rect>
-          </svg>
+          <div id="receipt-qr" role="img" aria-label="QR code of the receipt text" class="receipt-qr"></div>
+          <p id="receipt-qr-missing" class="hidden font-body-md text-[12px] text-on-surface-variant">
+            No QR here. The receipt text below works the same.</p>
         </div>
 
-        <span id="receipt-session-code" class="font-mono-code text-[11px] text-on-surface-variant uppercase tracking-wider mt-3">CNTR-8821-DELHI-T19</span>
+        <span id="receipt-id" class="font-mono-code text-[11px] text-on-surface-variant uppercase tracking-wider mt-3"></span>
 
         <!-- Subtle Metadata Details Line (NO green dot, strictly formal badge) -->
         <div class="w-full flex flex-col gap-3 mt-7 pt-6 border-t border-surface-container-highest font-body-md text-[13px]">
-          <div class="flex items-center justify-between">
-            <span class="text-on-surface-variant">Station Seat</span>
-            <span id="receipt-seat-val" class="font-mono-code text-[12px] text-primary font-semibold">LAB-04 // STN-19</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-on-surface-variant">Integrity Status</span>
-            <span class="badge-intact font-mono-code">[CHAIN INTACT]</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-on-surface-variant">Cosignatures</span>
-            <span id="receipt-cosig-val" class="font-mono-code text-[12px] text-primary font-semibold">14 of 14</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-on-surface-variant">Witness</span>
-            <span id="receipt-witness-val" class="font-headline text-[14px] text-primary">Examiner #02 (Delhi Vault)</span>
-          </div>
+          <div class="flex items-center justify-between"><span class="text-on-surface-variant">Station Seat</span>
+            <span id="receipt-seat-val" class="font-mono-code text-[12px] text-primary font-semibold"></span></div>
+          <div class="flex items-center justify-between"><span class="text-on-surface-variant">Events recorded</span>
+            <span id="receipt-events" class="font-mono-code text-[12px] text-primary font-semibold"></span></div>
+          <div class="flex flex-col gap-1"><span class="text-on-surface-variant">Final event</span>
+            <span id="receipt-head" class="font-mono-code text-[12px] text-primary break-all"></span></div>
+          <div class="flex flex-col gap-1"><span class="text-on-surface-variant">Held outside this computer</span>
+            <span id="receipt-standing" class="font-body-md text-[13px] text-primary"></span></div>
         </div>
 
         <!-- Minimal Stamp Seal -->
         <div class="mt-7 flex items-center justify-center">
           <div class="badge-brass">
             <span class="material-symbols-outlined text-[13px]">verified</span>
-            <span>Countersigned & Locked</span>
+            <span id="receipt-seal">Signed by this computer</span>
           </div>
         </div>
 
         <!-- Accessible Raw Digest -->
-        <textarea id="digest-raw" class="hidden" readonly aria-label="Plain text cryptographic voucher digest">CNTR::SESSION:8821::STN:19::TS:1729769414::EVENTS:212::WITNESS:EX02::SIG:8f3ac99241b0d77e102cb891b972e3a1f49c00de4a3194be::CHAIN:VERIFIED</textarea>
+        <textarea id="digest-raw" class="hidden" readonly aria-label="Plain text cryptographic voucher digest"></textarea>
 
         <!-- Subtle Footnote (strictly no italics) -->
         <div class="mt-7 text-center max-w-sm">
@@ -518,11 +434,13 @@ if __name__ == "__main__":
       </div>
 
       <!-- Action Deck -->
-      <div class="grid grid-cols-2 gap-4 mt-1 no-print">
+      <div class="grid grid-cols-3 gap-4 mt-1 no-print">
         <button id="copy-btn" type="button" class="min-h-[46px] px-4 bg-transparent border border-outline-variant hover:border-primary text-primary bg-surface transition-colors font-body-md text-[13px] font-medium flex items-center justify-center gap-2 rounded-sm">
           <span class="material-symbols-outlined text-[18px]">content_copy</span>
           <span id="copy-text">Copy Slip</span>
         </button>
+        <button id="save-btn" type="button" class="min-h-[46px] px-4 bg-transparent border border-outline-variant hover:border-primary text-primary bg-surface transition-colors font-body-md text-[13px] font-medium flex items-center justify-center gap-2">
+          <span class="material-symbols-outlined text-[18px]">download</span><span>Save receipt</span></button>
         <button id="print-btn" type="button" class="min-h-[46px] px-4 bg-primary text-on-primary hover:bg-tertiary transition-colors font-body-md text-[13px] font-medium flex items-center justify-center gap-2 rounded-sm">
           <span class="material-symbols-outlined text-[18px]">print</span>
           <span>Print Folio Slip</span>
@@ -544,6 +462,14 @@ if __name__ == "__main__":
           <span class="material-symbols-outlined text-[15px]">refresh</span>
           <span>Re-verify Store</span>
         </button>
+      </div>
+
+      <div class="flex flex-col gap-3 border border-surface-container-highest p-4">
+        <span class="font-mono-code text-[10px] uppercase text-secondary font-bold">CHECK A STUDENT RECEIPT</span>
+        <textarea id="receipt-check-input" rows="3" aria-label="Paste the receipt text"
+          class="font-mono-code text-[11px] w-full border border-outline-variant p-2"></textarea>
+        <button onclick="checkReceipt()" type="button" class="px-3.5 py-1.5 font-mono-code text-[11px] font-semibold bg-primary text-surface hover:bg-tertiary rounded-sm w-fit">Check receipt</button>
+        <ul id="receipt-check-out" class="font-body-md text-[13px] flex flex-col gap-1"></ul>
       </div>
 
       <div id="assessor-content-area" class="flex flex-col gap-6">
