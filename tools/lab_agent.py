@@ -12,13 +12,16 @@ import argparse
 import os
 import sys
 import threading
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from immutable import hashing, keys
 from immutable.agent import Agent, AgentError
+from immutable.courier import Courier
 from immutable.events import Event
+from immutable.net import HttpTransport
 from immutable.roster import Roster, RosterError, preflight
 from immutable.runner import run_python
 from immutable.wal import WalError
@@ -42,6 +45,7 @@ def main() -> int:
     ap.add_argument("--heartbeat", type=float, default=30.0)
     ap.add_argument("--assessor-pub", help="trusted assessor public key (from the exam office)")
     ap.add_argument("--transfer", help="assessor-signed transfer token, if this machine replaces another")
+    ap.add_argument("--witness", help="witness URL on the lab LAN, e.g. http://10.0.0.5:9443")
     a = ap.parse_args()
 
     ev_dir = Path(a.evidence)
@@ -82,6 +86,12 @@ def main() -> int:
         sys.exit(f"cannot start: {e}")
 
     agent.listeners.append(ledger)
+    courier = None
+    if a.witness:
+        courier = Courier(outbox=ev_dir / "outbox", anchors_dir=ev_dir / "anchors",
+                          state_path=ev_dir / "courier.json", transport=HttpTransport(a.witness),
+                          signer=signer, exam_id=a.exam, session_id=a.session, ws_id=a.ws)
+        courier.start()
     print("seq     type           hash      detail")
     for e in agent._wal.events:
         ledger(e)
@@ -92,12 +102,22 @@ def main() -> int:
         while not stop.wait(1.0):
             try:
                 agent.tick()
+                if courier is not None:
+                    u = courier.unreachable_s()
+                    if u > 60 and not ticker.warned:
+                        print("\nWitness unreachable. Your work is saved on this machine and will sync later.", flush=True)
+                        ticker.warned = True
+                    elif u == 0:
+                        ticker.warned = False
+                    if courier.rejected:
+                        print(f"\nWitness refused a batch: {list(courier.rejected.values())[-1]}. Call the invigilator.", flush=True)
             except AgentError:
                 return
             except WalError as e:
                 print(f"\nLOG FAILED, stopping: {e}", flush=True)
                 os._exit(2)
 
+    ticker.warned = False
     threading.Thread(target=ticker, daemon=True).start()
 
     try:
@@ -118,6 +138,8 @@ def main() -> int:
                     print(f"cannot run: {e}")
             elif cmd == "status":
                 print(agent.status())
+                if courier is not None:
+                    print("witness:", courier.status())
             elif cmd == "flush":
                 print(f"sealed {len(agent.flush())} batch(es)")
             elif cmd == "submit":
@@ -126,6 +148,17 @@ def main() -> int:
                       f"final seq {res.last_seq}, head {res.head}")
                 for s in res.skipped:
                     print(f"  NOT RECORDED: {s}")
+                if courier is not None:
+                    for _ in range(15):
+                        st = courier.pump_once()
+                        if st["pending"] == 0 and not st["last_error"]:
+                            break
+                        time.sleep(1)
+                    if st["delivered_upto"] >= res.last_seq:
+                        print(f"The witness holds your work up to event {st['delivered_upto']}.")
+                    else:
+                        print("The witness does not hold all of your work yet. Keep this window open.")
+                    courier.stop()
                 stop.set()
                 return 0
             elif cmd in ("quit", "exit"):

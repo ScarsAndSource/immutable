@@ -118,6 +118,22 @@ NO_EVIDENCE, SELF_CONSISTENT_ONLY (A0), ANCHORED (A1 or A2). Findings are SUSPEC
 NOTE; only SUSPECT can move a verdict. Only chains signed by the key bound to their seat
 count. Everything else is listed under `ignored`.
 
+## 12. Witness protocol
+POST /v1/batch (batch file) -> 200 anchor file | 4xx {"error","detail"}; POST /v1/ping
+(signed ping) -> 200 {"ok","held_upto","seen_ms"}; GET /v1/status. 4xx is permanent (stop
+retrying), network errors and 5xx are retried. Ping = canonical {"body": {v, exam_id,
+session_id, ws_id, boot_id, boot_ns, last_seq}, "sig"} signed by the seat key, domain `ping`;
+boot_ns must increase within a boot_id (replay protection).
+The witness keeps one hash per (session, seat, seq); a batch that disagrees with a held
+position, with the held predecessor, or with the held successor is refused whole (409).
+An anchor's seen_ms is the FIRST time the witness saw that event, so re-issued anchors are
+byte-identical. After an authentic TRANSFER the old seat is retired: events past
+from_last_seq are refused.
+Witness directory: anchors/<id>.anchor.json, batches/<id>.batch.json (a second copy of the
+evidence), witness.db. The assessor ingests both folders.
 
-
-
+## 13. Clock policy
+`step_note_ms`, `silence_note_ms`, `offset_note_ms`, `drift_note_ppm`, `drift_min_boot_ms`.
+CLOCK_DRIFT is a per-boot sum of wall-vs-uptime discrepancies below the step threshold, in
+ppm. All clock findings except CLOCK_BACKWARD and BOOT_REVISIT are notes. The policy is part
+of the case file, so changing it changes the case hash on purpose.

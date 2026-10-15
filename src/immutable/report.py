@@ -50,6 +50,12 @@ def render(case: Case) -> str:
                      + (f", anchored up to {c['anchored_upto']}" if c["anchored_upto"] is not None else ", not anchored")
                      + (f", from {utc(c['first_wall_ms'])} to {utc(c['last_wall_ms'])} by the machine's clock"
                         if c["first_wall_ms"] is not None else ""))
+            cv = c["stats"].get("coverage") or {}
+            if cv.get("anchors"):
+                L.append(f"    coverage: {cv['pinned_events']} of {cv['total_events']} events pinned by "
+                         f"{', '.join(cv['holders'])} ({cv['anchors']} anchors); longest stretch held only by the "
+                         f"workstation: {cv['max_unprotected_ms'] // 1000} s by its own clock; longest gap between "
+                         f"outside checks: {cv['max_anchor_gap_ms'] // 1000} s")
             suspicious += [f for f in c["findings"] if f["severity"] == "suspect"]
             notes += [f for f in c["findings"] if f["severity"] == "note"]
             proven += [f"seat {c['ws_id']}: {p['text']}" for p in c["proven"]]

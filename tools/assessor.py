@@ -12,13 +12,22 @@ session needs human review.
 import argparse
 import sys
 import tempfile
+import json
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
+from immutable.clockcheck import ClockPolicy
 from immutable.report import render
 from immutable.roster import Roster, RosterError
 from immutable.store import Store
+
+
+def load_policy(a):
+    if not a.policy:
+        return ClockPolicy()
+    d = json.loads(Path(a.policy).read_text())
+    return ClockPolicy(**{k: d[k] for k in ClockPolicy.__dataclass_fields__ if k in d})
 
 
 def load_roster(a) -> Roster:
@@ -40,6 +49,7 @@ def main() -> int:
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--roster", required=True)
     common.add_argument("--assessor-pub", required=True)
+    common.add_argument("--policy", help="clock policy JSON from evaluate.py calibrate")
     ap = argparse.ArgumentParser(prog="assessor")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
@@ -67,12 +77,12 @@ def main() -> int:
             print(path, store.ingest_path(path, live=a.live))
         return 0
     if a.cmd == "case":
-        return emit(Store(a.store, roster).case(), a)
+        return emit(Store(a.store, roster).case(load_policy(a)), a)
     with tempfile.TemporaryDirectory() as tmp:
         store = Store(tmp, roster)
         for path in a.paths:
             store.ingest_path(path)
-        case = store.case()
+        case = store.case(load_policy(a))
         store.close()
         return emit(case, a)
 

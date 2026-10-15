@@ -19,7 +19,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from enum import Enum
 
-from . import clockcheck, rules, submission
+from . import clockcheck, coverage, rules, submission
 from .anchor import Anchor
 from .chain import Branch, Walk
 from .clockcheck import ClockPolicy
@@ -152,6 +152,7 @@ def assess_chain(*, roster: Roster, session_id: str, ws_id: str, signer: str,
 
     outside = [a for a in consistent if a.kind != "receipt"]
     anchored_upto = max((a.upto_seq for a in outside), default=None)
+    cov = coverage.compute(trunk, outside)
     ended = bool(trunk) and trunk[-1].type == "SESSION_END"
     receipt_ok = any(a.kind == "receipt" and a.upto_seq == last for a in consistent)
     assurance = "A0" if anchored_upto is None else ("A2" if receipt_ok and ended else "A1")
@@ -215,7 +216,7 @@ def assess_chain(*, roster: Roster, session_id: str, ws_id: str, signer: str,
         anchored_upto, un_events, un_secs, wk.beyond, ended, submitted,
         judged, proven, unprov, F,
         {"events": rs["events"], "checkpoints_ok": rs["checkpoints_ok"],
-         "clock": ci, "submission": sub_stats})
+         "clock": ci, "submission": sub_stats, "coverage": cov})
 
 
 def assess_session(session_id: str, chains: list[ChainReport], findings: list[Finding],

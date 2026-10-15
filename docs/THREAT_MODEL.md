@@ -47,9 +47,12 @@ Every attack test links back to a row ID here. Update this file before code.
 | T17 | Student moves to a better machine mid-exam without authorisation | X1 | A3 | Yes | A chain on an unenrolled seat or key is UNKNOWN_SEAT / KEY_NOT_ENROLLED; a TRANSFER without the assessor's signature for this exact seat and key is TRANSFER_INVALID. |
 | T18 | Transfer used to reset or hide history | X1 X2 | A2 | Yes | The signed from_last_seq and from_head pin where the old chain ends. Writing past it, a different head, or a missing tail is TRANSFER_MISMATCH. |
 | T19 | Assessor key stolen or a roster swapped before the exam | X4 | A3 | No | Out of scope (stated). Mitigation is organisational: fingerprint printed on the envelope, roster id recorded in every SESSION_START so a late swap is visible as two different roster ids. |
-
-
-
+| T20 | Witness equivocates or is fed two histories | X1 X3 | A2 | Prevented at the witness | One hash per (session, seat, seq); conflicting batches refused whole and logged as authenticated refusals. |
+| T21 | Witness down for a stretch | X5 | A2 | Visible | The stretch is anchor gap and unprotected exposure in the coverage line; nothing is faked. |
+| T22 | Student stops the courier or deletes local anchors | X1 | A2 | Partly | Witness contact record shows the silence; the witness keeps its own anchors and batch copies. |
+| T23 | Witness operator colluding with a student | X1 X4 | A2 | No | Out of scope (stated). |
+| T24 | Unauthorized seat gets anchors via a forged transfer | X1 | A3 | Yes | The witness binds a key only through an assessor-signed TRANSFER naming that exact seat and key. |
+| T25 | Replayed ping fakes liveness | X3 | A4 | Yes | boot_ns must increase within a boot_id (replay protection). |
 
 ## Evidence assurance levels
 - **A0** self-consistent only. Proves little against a root attacker.
