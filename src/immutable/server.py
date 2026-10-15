@@ -171,6 +171,9 @@ class ImmutableService:
                 flush=self.agent.flush,
                 status=self.agent.status,
                 pump=self.courier.pump_once,
+                record_state=lambda state, seq: self.agent._emit(
+                    "SYNC_STATE", {"state": "resynced" if state == "resync" else state,
+                                   "last_confirmed_seq": seq}),
             )
             self.courier.start()
             # The editor stays CONNECTING until this establishes an outside hold.

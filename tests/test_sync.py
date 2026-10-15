@@ -70,3 +70,14 @@ def test_permanent_rejection_locks_with_actionable_detail():
     assert not sync.synchronize()
     s = sync.snapshot()
     assert s.state is SyncState.LOCKED and "invigilator" in s.detail
+
+
+def test_state_changes_are_emitted_as_wal_claims():
+    clock, claimed = Clock(), []
+    sync, _ = make_controller([down(), down(), ack()], clock)
+    sync._record_state = lambda state, seq: claimed.append((state, seq))
+    assert not sync.synchronize()
+    assert claimed == [("probing", 0), ("locked", 0)]
+    clock.advance(1)
+    assert sync.tick()
+    assert claimed[-2:] == [("resync", 0), ("synced", 7)]

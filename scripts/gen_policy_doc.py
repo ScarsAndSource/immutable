@@ -29,6 +29,7 @@ DESC = {
     "RECOVERY": "The agent restarted after a power cut or crash. Records the last good event and how many bytes were discarded.",
     "TRANSFER": "An assessor-signed move of the student to a different seat. Records the old seat, its last event and head, and the assessor's signature.",
     "SESSION_END": "The session closed: submitted, timed out or aborted.",
+    "SYNC_STATE": "The workstation changed evidence-sync state. This is a local claim; server acknowledgements remain authoritative.",
 }
 
 KIND = {

@@ -52,8 +52,10 @@ class SyncController:
     RETRIES_S = (1.0, 2.0, 4.0, 8.0, 10.0)
 
     def __init__(self, *, flush: Callable[[], object], status: Callable[[], dict],
-                 pump: Callable[[], dict], now: Callable[[], float] = time.monotonic):
+                 pump: Callable[[], dict], now: Callable[[], float] = time.monotonic,
+                 record_state: Callable[[str, int], None] | None = None):
         self._flush, self._status, self._pump, self._now = flush, status, pump, now
+        self._record_state = record_state
         self._lock = threading.RLock()
         self._state = SyncState.CONNECTING
         self._last_confirmed_seq = -1
@@ -79,7 +81,8 @@ class SyncController:
 
     def mark_finalized(self) -> None:
         with self._lock:
-            self._state, self._next_retry = SyncState.FINALIZED, None
+            self._set_state(SyncState.FINALIZED)
+            self._next_retry = None
 
     def synchronize(self) -> bool:
         """Attempt a save acknowledgement, including the one immediate retry."""
@@ -89,7 +92,7 @@ class SyncController:
             if self._attempt():
                 self._become_synced(resynced=self._state in (SyncState.LOCKED, SyncState.RESYNC))
                 return True
-            self._state = SyncState.PROBING
+            self._set_state(SyncState.PROBING)
             if self._attempt():
                 self._become_synced(resynced=False)
                 return True
@@ -101,7 +104,7 @@ class SyncController:
         with self._lock:
             if self._state is not SyncState.LOCKED or self._next_retry is None or self._now() < self._next_retry:
                 return False
-            self._state = SyncState.RESYNC
+            self._set_state(SyncState.RESYNC)
             if self._attempt():
                 self._become_synced(resynced=True)
                 return True
@@ -146,12 +149,22 @@ class SyncController:
         return True
 
     def _become_synced(self, *, resynced: bool) -> None:
-        self._state, self._next_retry, self._retry_index, self._detail = SyncState.SYNCED, None, 0, None
+        self._set_state(SyncState.SYNCED)
+        self._next_retry, self._retry_index, self._detail = None, 0, None
         self._last_saved = self._now()
 
     def _lock_editor(self) -> None:
         delay = self.RETRIES_S[min(self._retry_index, len(self.RETRIES_S) - 1)]
         self._retry_index += 1
-        self._state = SyncState.LOCKED
+        self._set_state(SyncState.LOCKED)
         self._next_retry = self._now() + delay
+
+    def _set_state(self, state: SyncState) -> None:
+        if state is self._state:
+            return
+        self._state = state
+        if self._record_state and state is not SyncState.FINALIZED:
+            # A workstation claim: durable locally, but never authoritative for
+            # server contact (the remote journal and acknowledgement are).
+            self._record_state(state.value, max(0, self._last_confirmed_seq))
 

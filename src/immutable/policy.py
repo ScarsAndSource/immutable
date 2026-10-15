@@ -67,6 +67,8 @@ SCHEMAS: dict[str, dict] = {
     "TRANSFER":      {"from_ws_id": _ident, "from_last_seq": _uint,
                       "from_head": is_hash, "assessor_sig": _sig},
     "SESSION_END":   {"reason": _enum("submitted", "timeout", "aborted")},
+    "SYNC_STATE":    {"state": _enum("synced", "probing", "locked", "resynced"),
+                      "last_confirmed_seq": _uint},
 }
 
 

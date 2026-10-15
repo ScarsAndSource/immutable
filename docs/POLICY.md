@@ -127,6 +127,15 @@ The session closed: submitted, timed out or aborted.
 |---|---|
 | `reason` | one of: `submitted`, `timeout`, `aborted` |
 
+### SYNC_STATE
+
+The workstation changed evidence-sync state. This is a local claim; server acknowledgements remain authoritative.
+
+| Field | Allowed value |
+|---|---|
+| `state` | one of: `synced`, `probing`, `locked`, `resynced` |
+| `last_confirmed_seq` | a non-negative whole number |
+
 ## Things to know
 
 - File **names** are recorded (paths relative to the workspace). Name files accordingly.
