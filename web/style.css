@@ -1,0 +1,171 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Strictly no italics anywhere as required */
+*, *::before, *::after {
+  font-style: normal !important;
+}
+
+/* Custom crisp archival rules and typography */
+body {
+  background-color: #fef9f0;
+  color: #010a22;
+  font-family: "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Crisp formal typography helpers */
+.font-headline {
+  font-family: "Newsreader", "Georgia", serif;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
+.font-mono-code {
+  font-family: "JetBrains Mono", "Courier New", monospace;
+}
+
+/* Clean monospaced status badges - NO green dots */
+.badge-intact {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #2F6B4F;
+  background-color: #f2ede4;
+  border: 1px solid #2F6B4F;
+  padding: 0.2rem 0.55rem;
+  border-radius: 2px;
+}
+
+.badge-suspect {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #ba1a1a;
+  background-color: #ffdad6;
+  border: 1px solid #ba1a1a;
+  padding: 0.2rem 0.55rem;
+  border-radius: 2px;
+}
+
+.badge-neutral {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #3c4661;
+  background-color: #f2ede4;
+  border: 1px solid #c6c6ce;
+  padding: 0.2rem 0.55rem;
+  border-radius: 2px;
+}
+
+.badge-brass {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #775a09;
+  background-color: #f8f3ea;
+  border: 1px solid #b08d3c;
+  padding: 0.25rem 0.65rem;
+  border-radius: 2px;
+}
+
+/* Archival ledger container with subtle perforation notches */
+.archival-voucher {
+  background-color: #f8f3ea;
+  border: 1px solid #e7e2d9;
+  position: relative;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+}
+
+.perforation-notch-left {
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #fef9f0;
+  border-right: 1px solid #e7e2d9;
+}
+
+.perforation-notch-right {
+  position: absolute;
+  right: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #fef9f0;
+  border-left: 1px solid #e7e2d9;
+}
+
+/* Event ledger timeline node */
+.ledger-event-row {
+  border-left: 2px solid #e7e2d9;
+  position: relative;
+  transition: border-color 0.15s ease;
+}
+
+.ledger-event-row:hover {
+  border-left-color: #010a22;
+  background-color: #f2ede4;
+}
+
+.ledger-event-row::before {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: 14px;
+  width: 8px;
+  height: 8px;
+  background-color: #ded9d1;
+  border: 1px solid #010a22;
+  border-radius: 1px;
+}
+
+.ledger-event-row.is-active::before {
+  background-color: #010a22;
+}
+
+/* Print styling for archival folio receipt */
+@media print {
+  header, nav, .no-print {
+    display: none !important;
+  }
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+  .archival-voucher {
+    border: 1px solid #000000 !important;
+    box-shadow: none !important;
+    background-color: #ffffff !important;
+    padding: 24px !important;
+    margin: 0 auto !important;
+  }
+}

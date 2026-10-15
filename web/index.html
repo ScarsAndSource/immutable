@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+  <title>Immutable — Archival Exam Logbook</title>
+  
+  <!-- Material Symbols & Formal Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+
+  <!-- Tailwind CSS Engine -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface": "#fef9f0",
+            "surface-bright": "#fef9f0",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-low": "#f8f3ea",
+            "surface-container": "#f2ede4",
+            "surface-container-high": "#ece8df",
+            "surface-container-highest": "#e7e2d9",
+            "primary": "#010a22",
+            "on-primary": "#ffffff",
+            "secondary": "#775a09",
+            "secondary-container": "#fed57c",
+            "on-surface": "#010a22",
+            "on-surface-variant": "#45464d",
+            "outline": "#76777e",
+            "outline-variant": "#c6c6ce",
+            "error": "#ba1a1a",
+            "error-container": "#ffdad6",
+            "tertiary": "#010a23",
+            "tertiary-container": "#17213a",
+          },
+          fontFamily: {
+            "headline": ["Newsreader", "Georgia", "serif"],
+            "body-md": ["Hanken Grotesk", "-apple-system", "sans-serif"],
+            "mono-code": ["JetBrains Mono", "Courier New", "monospace"],
+          }
+        }
+      }
+    };
+  </script>
+
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    /* Strict global reset to enforce no italics anywhere */
+    *, *::before, *::after {
+      font-style: normal !important;
+    }
+    body {
+      min-height: max(884px, 100dvh);
+      background-color: #fef9f0;
+      color: #010a22;
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface font-body-md min-h-screen flex flex-col antialiased">
+
+  <!-- Universal Archival Header & View Switcher -->
+  <header class="fixed top-0 inset-x-0 z-50 bg-surface/95 backdrop-blur-md border-b border-surface-container-highest no-print">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+      
+      <!-- Brand & Title -->
+      <div class="flex items-center gap-3 min-w-0">
+        <span class="material-symbols-outlined text-primary text-[22px]">history_edu</span>
+        <div class="flex flex-col min-w-0">
+          <span class="font-mono-code text-[10px] uppercase tracking-widest text-secondary font-bold">Immutable System</span>
+          <span class="font-headline text-[15px] text-primary font-medium tracking-tight truncate leading-none">Archival Examination Ledger</span>
+        </div>
+      </div>
+
+      <!-- Navigation Perspectives -->
+      <nav class="hidden md:flex items-center gap-1.5 bg-surface-container-low p-1 border border-surface-container-highest rounded-sm">
+        <button data-nav-view="briefing" class="px-3 py-1.5 font-mono-code text-[11px] font-semibold tracking-wider uppercase bg-primary text-surface rounded-sm">
+          01 // Attestation
+        </button>
+        <button data-nav-view="workstation" class="px-3 py-1.5 font-mono-code text-[11px] font-medium tracking-wider uppercase text-on-surface-variant hover:text-primary rounded-sm transition-colors">
+          02 // Workstation
+        </button>
+        <button data-nav-view="receipt" class="px-3 py-1.5 font-mono-code text-[11px] font-medium tracking-wider uppercase text-on-surface-variant hover:text-primary rounded-sm transition-colors">
+          03 // Receipt
+        </button>
+        <button data-nav-view="assessor" class="px-3 py-1.5 font-mono-code text-[11px] font-medium tracking-wider uppercase text-on-surface-variant hover:text-primary rounded-sm transition-colors">
+          04 // Assessor Audit
+        </button>
+        <button data-nav-view="tamperlab" class="px-3 py-1.5 font-mono-code text-[11px] font-medium tracking-wider uppercase text-on-surface-variant hover:text-primary rounded-sm transition-colors">
+          05 // Tamper Lab
+        </button>
+        <button data-nav-view="witness" class="px-3 py-1.5 font-mono-code text-[11px] font-medium tracking-wider uppercase text-on-surface-variant hover:text-primary rounded-sm transition-colors">
+          06 // LAN Witness
+        </button>
+      </nav>
+
+      <!-- Language Switcher & Profile -->
+      <div class="flex items-center gap-3 shrink-0">
+        <div class="flex items-center font-mono-code text-[11px] border border-surface-container-highest px-2 py-1 rounded-sm bg-surface">
+          <button id="lang-en" class="font-semibold text-primary px-1.5 py-0.5 border-b border-primary" type="button">EN</button>
+          <span class="text-outline-variant mx-1">/</span>
+          <button id="lang-hi" class="text-on-surface-variant hover:text-primary px-1.5 py-0.5" type="button">हिंदी</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Space -->
+  <main class="flex-1 flex flex-col relative w-full pt-20 pb-12 bg-surface">
+    
+    <!-- ============================================================ -->
+    <!-- VIEW 1: BEFORE YOU BEGIN (CANDIDATE ATTESTATION)             -->
+    <!-- ============================================================ -->
+    <section id="view-briefing" class="w-full max-w-2xl mx-auto px-6 py-6 flex flex-col gap-8">
+      
+      <!-- Top Folio Reference -->
+      <div class="flex items-center justify-between pb-3 border-b border-surface-container-highest">
+        <div class="flex items-center gap-2">
+          <span id="txt-briefing-station" class="font-mono-code text-[11px] font-bold text-on-surface tracking-wider uppercase">LAB 04 • TERMINAL 19</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="badge-neutral font-mono-code" id="txt-briefing-folio-ref">FOLIO REF. §01-PRE</span>
+          <span class="badge-intact font-mono-code" id="txt-briefing-chain-intact">[CHAIN INTACT]</span>
+        </div>
+      </div>
+
+      <!-- Editorial Title -->
+      <div class="flex flex-col gap-2 pt-1">
+        <h1 id="main-heading" class="font-headline text-[34px] leading-tight text-primary font-medium tracking-tight">Before you begin</h1>
+        <p id="sub-heading" class="font-headline text-[17px] text-on-surface-variant font-normal leading-relaxed">
+          An immutable ship’s logbook of your practical exam. Protected, not watched.
+        </p>
+      </div>
+
+      <!-- Policy Commitments (What We Record vs What We Never Record) -->
+      <div class="flex flex-col gap-8 py-2">
+        
+        <!-- What We Record -->
+        <div class="flex flex-col gap-3.5">
+          <div class="flex items-baseline justify-between border-b border-surface-container-highest pb-2">
+            <span id="txt-record-title" class="font-mono-code text-[11px] font-bold uppercase tracking-wider text-primary">What we record</span>
+            <span id="txt-record-tag" class="font-mono-code text-[10px] text-secondary font-semibold uppercase tracking-wider">TAMPER-EVIDENT</span>
+          </div>
+          <ul class="flex flex-col gap-3.5 pt-1">
+            <li class="flex items-start gap-3">
+              <span class="font-mono-code text-secondary text-[13px] font-bold mt-0.5 select-none">[✓]</span>
+              <div class="flex-1 flex flex-col gap-0.5">
+                <span id="txt-record-1-t" class="font-medium text-primary text-[14px]">File state fingerprints</span>
+                <p id="txt-record-1-d" class="font-body-md text-[13px] text-on-surface-variant leading-relaxed">Cryptographic SHA-256 digests committed only when you explicitly save, execute, or submit code.</p>
+              </div>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="font-mono-code text-secondary text-[13px] font-bold mt-0.5 select-none">[✓]</span>
+              <div class="flex-1 flex flex-col gap-0.5">
+                <span id="txt-record-2-t" class="font-medium text-primary text-[14px]">System restart & sync intervals</span>
+                <p id="txt-record-2-d" class="font-body-md text-[13px] text-on-surface-variant leading-relaxed">Timestamps of terminal power events, kernel boots, and local network packet deliveries.</p>
+              </div>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="font-mono-code text-secondary text-[13px] font-bold mt-0.5 select-none">[✓]</span>
+              <div class="flex-1 flex flex-col gap-0.5">
+                <span id="txt-record-3-t" class="font-medium text-primary text-[14px]">Local hardware checksum integrity</span>
+                <p id="txt-record-3-d" class="font-body-md text-[13px] text-on-surface-variant leading-relaxed">Periodic peripheral seal verifications to ensure the workstation partition remains unaltered.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- What We Never Record -->
+        <div class="flex flex-col gap-3.5 pt-1">
+          <div class="flex items-baseline justify-between border-b border-surface-container-highest pb-2">
+            <span id="txt-never-title" class="font-mono-code text-[11px] font-bold uppercase tracking-wider text-outline">What we never record</span>
+            <span id="txt-never-tag" class="font-mono-code text-[10px] text-outline font-semibold uppercase tracking-wider">ZERO-TELEMETRY</span>
+          </div>
+          <ul class="flex flex-col gap-3.5 pt-1">
+            <li class="flex items-start gap-3">
+              <span class="font-mono-code text-outline text-[13px] font-bold mt-0.5 select-none">[—]</span>
+              <div class="flex-1 flex flex-col gap-0.5">
+                <span id="txt-never-1-t" class="text-on-surface text-[14px]">Keystrokes, timing cadence, or cursor paths</span>
+                <p id="txt-never-1-d" class="font-body-md text-[13px] text-on-surface-variant leading-relaxed">No keyloggers or behavior profiling. You think and draft in total privacy.</p>
+              </div>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="font-mono-code text-outline text-[13px] font-bold mt-0.5 select-none">[—]</span>
+              <div class="flex-1 flex flex-col gap-0.5">
+                <span id="txt-never-2-t" class="text-on-surface text-[14px]">Screen captures, desktop stream, or frame buffers</span>
+                <p id="txt-never-2-d" class="font-body-md text-[13px] text-on-surface-variant leading-relaxed">Zero visual recording of your work process or scratch notes.</p>
+              </div>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="font-mono-code text-outline text-[13px] font-bold mt-0.5 select-none">[—]</span>
+              <div class="flex-1 flex flex-col gap-0.5">
+                <span id="txt-never-3-t" class="text-on-surface text-[14px]">Camera, microphone, acoustic, or biometric scans</span>
+                <p id="txt-never-3-d" class="font-body-md text-[13px] text-on-surface-variant leading-relaxed">All audiovisual capture drivers are electrically disconnected on this node.</p>
+              </div>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="font-mono-code text-outline text-[13px] font-bold mt-0.5 select-none">[—]</span>
+              <div class="flex-1 flex flex-col gap-0.5">
+                <span id="txt-never-4-t" class="text-on-surface text-[14px]">Network traffic outside the isolated exam bundle</span>
+                <p id="txt-never-4-d" class="font-body-md text-[13px] text-on-surface-variant leading-relaxed">The local switch strictly permits only offline manual mirror references.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Evidentiary Guarantee (strictly no italics) -->
+      <div class="p-4 border-l-2 border-secondary bg-surface-container-low flex flex-col gap-1.5 rounded-sm">
+        <span id="txt-guarantee-title" class="font-mono-code text-[11px] text-secondary uppercase font-bold tracking-wider">EVIDENTIARY GUARANTEE §4.1</span>
+        <p id="marginal-text" class="font-headline text-[15px] text-on-surface leading-relaxed">
+          “Protected, not watched. This cryptographic record protects your submission if hardware power drops or an evaluation is formally contested.”
+        </p>
+      </div>
+
+      <!-- Affirmation & Entry Button -->
+      <div class="pt-2 flex flex-col gap-4">
+        <div class="flex items-center gap-3">
+          <input type="checkbox" id="affirmation-check" class="w-4 h-4 rounded-sm border-primary text-primary focus:ring-0 cursor-pointer accent-primary"/>
+          <label for="affirmation-check" id="txt-affirm-label" class="font-body-md text-[13px] text-on-surface cursor-pointer select-none">
+            I acknowledge the immutable audit log policy for Seat 19
+          </label>
+        </div>
+
+        <button id="start-btn" type="button" class="w-full h-12 bg-primary text-surface font-body-md text-[14px] font-medium rounded-sm hover:bg-tertiary transition-colors flex items-center justify-center gap-2">
+          <span id="btn-text">I understand, start my exam</span>
+          <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+        </button>
+
+        <div class="flex items-center justify-between font-mono-code text-[11px] text-on-surface-variant/80 pt-1">
+          <span>SESSION SHA: <span class="font-bold">e79b..8a21</span></span>
+          <span>AUDITOR: IN-STATION CO-SIGN</span>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ============================================================ -->
+    <!-- VIEW 2: ACTIVE CANDIDATE WORKSTATION & LIVE LEDGER           -->
+    <!-- ============================================================ -->
+    <section id="view-workstation" class="hidden w-full max-w-7xl mx-auto px-4 py-4 flex flex-col gap-6">
+      
+      <!-- Workstation Header Status Bar -->
+      <div class="p-4 bg-surface-container-low border border-surface-container-highest rounded-sm flex items-center justify-between flex-wrap gap-4">
+        <div class="flex items-center gap-4">
+          <div class="flex flex-col">
+            <span class="font-mono-code text-[10px] uppercase text-secondary font-bold">STATION IDENTIFIER</span>
+            <span id="ws-terminal-id" class="font-mono-code text-[14px] font-semibold text-primary">LAB 04 // STN-19</span>
+          </div>
+          <div class="h-6 w-px bg-surface-container-highest"></div>
+          <div class="flex flex-col">
+            <span class="font-mono-code text-[10px] uppercase text-on-surface-variant">LATEST EVENT HEAD</span>
+            <span id="ws-head-hash" class="font-mono-code text-[12px] text-primary">9a2f7c0142b58de1…</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <span id="ws-seq-counter" class="font-mono-code text-[11px] font-bold px-2 py-1 bg-surface border border-surface-container-highest rounded-sm">SEQ: 0</span>
+          <span id="ws-witness-tag" class="badge-intact font-mono-code">[LAN WITNESS · 14 CO-SIGNATURES · CHAIN INTACT]</span>
+          <button id="btn-submit-exam" type="button" class="px-4 py-2 bg-primary text-surface font-mono-code text-[12px] font-semibold tracking-wider uppercase hover:bg-tertiary transition-colors rounded-sm">
+            Final Submit & Seal
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Two-Column Split (Left: Workspace & Editor, Right: Chained Event Stream) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Column: Workspace File Browser & Editor (7 cols) -->
+        <div class="lg:col-span-7 flex flex-col gap-5">
+          
+          <!-- Workspace Files Strip -->
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="font-mono-code text-[11px] font-bold uppercase tracking-wider text-primary">Candidate Workspace Files</span>
+              <span class="font-mono-code text-[10px] text-on-surface-variant">SHA-256 AUTOMATICALLY FINGERPRINTED ON SAVE</span>
+            </div>
+            <div id="ws-files-list" class="grid grid-cols-2 gap-3">
+              <!-- Dynamically populated files -->
+            </div>
+          </div>
+
+          <!-- Code Editor Panel -->
+          <div class="border border-surface-container-highest rounded-sm bg-surface flex flex-col overflow-hidden">
+            <div class="px-4 py-2.5 bg-surface-container-low border-b border-surface-container-highest flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[16px] text-primary">terminal</span>
+                <span id="editor-filename" class="font-mono-code text-[12px] font-bold text-primary">solution.py</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button id="btn-save-file" type="button" class="px-3 py-1 font-mono-code text-[11px] font-semibold border border-outline-variant hover:border-primary text-primary bg-surface rounded-sm transition-colors">
+                  Save File
+                </button>
+                <button id="btn-run-code" type="button" class="px-3 py-1 font-mono-code text-[11px] font-semibold bg-primary text-surface hover:bg-tertiary rounded-sm transition-colors">
+                  Run Python
+                </button>
+              </div>
+            </div>
+            
+            <textarea id="code-editor-textarea" rows="12" class="p-4 font-mono-code text-[13px] leading-relaxed bg-surface text-primary border-none focus:ring-0 resize-y w-full outline-none" spellcheck="false">"""Practical Exam: Task 1 - Consistent Digest Matrix"""
+
+def solve(n: int) -> int:
+    total = sum(i * i for i in range(n))
+    print(f"Computed sum of squares for {n}: {total}")
+    return total
+
+if __name__ == "__main__":
+    solve(10)
+</textarea>
+          </div>
+
+          <!-- Sandbox Execution Output -->
+          <div class="border border-surface-container-highest rounded-sm bg-surface-container-low p-4 flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="font-mono-code text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Execution Console Output</span>
+              <span class="font-mono-code text-[10px] text-on-surface-variant">WALL-CLOCK RUNTIME CAP: 10.0s</span>
+            </div>
+            <pre id="execution-terminal-output" class="p-3 bg-surface font-mono-code text-[11px] text-primary border border-surface-container-highest rounded-sm overflow-x-auto min-h-[70px]">Ready to execute. Click "Run Python" to test code in isolated sandbox.</pre>
+          </div>
+
+          <!-- Fast Workstation Actions -->
+          <div class="grid grid-cols-2 gap-3 pt-1">
+            <button id="btn-checkpoint" type="button" class="p-2.5 bg-surface border border-outline-variant hover:border-primary font-mono-code text-[11px] font-semibold uppercase text-primary rounded-sm transition-colors flex items-center justify-center gap-1.5">
+              <span class="material-symbols-outlined text-[16px]">bookmark</span>
+              <span>Create Checkpoint</span>
+            </button>
+            <button id="btn-flush" type="button" class="p-2.5 bg-surface border border-outline-variant hover:border-primary font-mono-code text-[11px] font-semibold uppercase text-primary rounded-sm transition-colors flex items-center justify-center gap-1.5">
+              <span class="material-symbols-outlined text-[16px]">sync</span>
+              <span>Force Sync to Witness</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Right Column: Live Hash-Chained Event Ledger (5 cols) -->
+        <div class="lg:col-span-5 flex flex-col gap-3">
+          <div class="flex items-center justify-between pb-2 border-b border-surface-container-highest">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px] text-primary">receipt_long</span>
+              <span class="font-mono-code text-[11px] font-bold uppercase tracking-wider text-primary">Immutable Chained Ledger</span>
+            </div>
+            <span id="ws-events-total-count" class="font-mono-code text-[10px] text-on-surface-variant font-semibold">0 EVENTS</span>
+          </div>
+
+          <p class="font-body-md text-[12px] text-on-surface-variant leading-relaxed">
+            Every file change, code run, and checkpoint appends to this tamper-evident hash chain.
+          </p>
+
+          <!-- Timeline Container -->
+          <div class="p-4 border border-surface-container-highest rounded-sm bg-surface flex flex-col gap-2 max-h-[560px] overflow-y-auto">
+            <div id="ws-events-stream" class="flex flex-col gap-2">
+              <!-- Dynamically populated ledger events -->
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ============================================================ -->
+    <!-- VIEW 3: ARCHIVAL FOLIO RECEIPT (OFFICIAL SLIP)               -->
+    <!-- ============================================================ -->
+    <section id="view-receipt" class="hidden w-full max-w-xl mx-auto px-6 py-4 flex flex-col gap-6">
+      
+      <!-- Top Folio Stamp -->
+      <div class="flex items-center justify-between pb-4 border-b border-dashed border-outline-variant/60">
+        <div class="flex items-center gap-2 text-on-surface-variant">
+          <span class="material-symbols-outlined text-[16px]">receipt_long</span>
+          <span class="font-mono-code uppercase tracking-widest text-[10px]">Archival Slip • Official Folio</span>
+        </div>
+        <span class="font-mono-code text-[11px] text-on-surface-variant font-medium tracking-wider">№ 8821</span>
+      </div>
+
+      <!-- Spacious Physical Receipt Container with Subtle Perforations -->
+      <div class="archival-voucher px-8 py-10 flex flex-col items-center relative" id="ledger-voucher">
+        
+        <!-- Subtle Perforation Corner Notches -->
+        <div aria-hidden="true" class="perforation-notch-left"></div>
+        <div aria-hidden="true" class="perforation-notch-right"></div>
+
+        <!-- Subdued Header & Editorial Typography (strictly no italics) -->
+        <div class="flex flex-col items-center text-center">
+          <span id="txt-receipt-sub" class="font-mono-code text-[10px] tracking-widest uppercase text-secondary font-bold">Permanent Ledger Submission</span>
+          <h2 id="txt-receipt-header" class="font-headline text-[38px] text-primary mt-2 font-normal">Submitted</h2>
+          <p id="receipt-submitted-date" class="font-mono-code text-[11px] text-on-surface-variant mt-2 tracking-wide">24 Oct 2024 • 11:30:14 IST</p>
+        </div>
+
+        <!-- Subtle Rule -->
+        <div class="w-16 border-t border-[#B08D3C]/60 my-7"></div>
+
+        <!-- Centered High-Fidelity Quiet QR Matrix -->
+        <div class="p-4 bg-surface border border-surface-container-highest flex flex-col items-center justify-center my-1">
+          <svg aria-label="Cryptographic Proof QR Matrix" class="w-40 h-40 text-primary" fill="currentColor" role="img" viewBox="0 0 29 29">
+            <rect height="7" width="7" x="0" y="0"></rect>
+            <rect fill="#fef9f0" height="5" width="5" x="1" y="1"></rect>
+            <rect height="3" width="3" x="2" y="2"></rect>
+            <rect height="7" width="7" x="22" y="0"></rect>
+            <rect fill="#fef9f0" height="5" width="5" x="23" y="1"></rect>
+            <rect height="3" width="3" x="24" y="2"></rect>
+            <rect height="7" width="7" x="0" y="22"></rect>
+            <rect fill="#fef9f0" height="5" width="5" x="1" y="23"></rect>
+            <rect height="3" width="3" x="2" y="24"></rect>
+            <rect height="1" width="1" x="8" y="2"></rect>
+            <rect height="1" width="2" x="10" y="2"></rect>
+            <rect height="1" width="1" x="14" y="2"></rect>
+            <rect height="1" width="2" x="18" y="2"></rect>
+            <rect height="1" width="2" x="8" y="4"></rect>
+            <rect height="1" width="3" x="12" y="4"></rect>
+            <rect height="1" width="1" x="17" y="4"></rect>
+            <rect height="1" width="1" x="19" y="4"></rect>
+            <rect height="1" width="1" x="0" y="8"></rect>
+            <rect height="1" width="2" x="2" y="8"></rect>
+            <rect height="1" width="1" x="5" y="8"></rect>
+            <rect height="1" width="3" x="8" y="8"></rect>
+            <rect height="1" width="1" x="13" y="8"></rect>
+            <rect height="1" width="2" x="16" y="8"></rect>
+            <rect height="1" width="1" x="20" y="8"></rect>
+            <rect height="1" width="3" x="24" y="8"></rect>
+            <rect height="1" width="1" x="2" y="10"></rect>
+            <rect height="1" width="3" x="4" y="10"></rect>
+            <rect height="1" width="1" x="9" y="10"></rect>
+            <rect height="1" width="2" x="11" y="10"></rect>
+            <rect height="1" width="3" x="15" y="10"></rect>
+            <rect height="1" width="1" x="22" y="10"></rect>
+            <rect height="1" width="2" x="26" y="10"></rect>
+            <rect height="1" width="3" x="0" y="12"></rect>
+            <rect height="1" width="1" x="5" y="12"></rect>
+            <rect height="1" width="1" x="8" y="12"></rect>
+            <rect height="1" width="3" x="11" y="12"></rect>
+            <rect height="1" width="1" x="16" y="12"></rect>
+            <rect height="1" width="2" x="18" y="12"></rect>
+            <rect height="1" width="4" x="23" y="12"></rect>
+            <rect height="1" width="2" x="3" y="14"></rect>
+            <rect height="1" width="1" x="7" y="14"></rect>
+            <rect height="1" width="2" x="10" y="14"></rect>
+            <rect height="1" width="1" x="14" y="14"></rect>
+            <rect height="1" width="3" x="17" y="14"></rect>
+            <rect height="1" width="2" x="21" y="14"></rect>
+            <rect height="1" width="3" x="1" y="16"></rect>
+            <rect height="1" width="2" x="6" y="16"></rect>
+            <rect height="1" width="1" x="9" y="16"></rect>
+            <rect height="1" width="4" x="12" y="16"></rect>
+            <rect height="1" width="1" x="18" y="16"></rect>
+            <rect height="1" width="2" x="25" y="16"></rect>
+            <rect height="1" width="1" x="4" y="18"></rect>
+            <rect height="1" width="3" x="7" y="18"></rect>
+            <rect height="1" width="1" x="11" y="18"></rect>
+            <rect height="1" width="2" x="15" y="18"></rect>
+            <rect height="1" width="3" x="20" y="18"></rect>
+            <rect height="1" width="1" x="26" y="18"></rect>
+            <rect height="1" width="2" x="8" y="20"></rect>
+            <rect height="1" width="1" x="12" y="20"></rect>
+            <rect height="1" width="3" x="14" y="20"></rect>
+            <rect height="1" width="2" x="19" y="20"></rect>
+            <rect height="1" width="1" x="23" y="20"></rect>
+            <rect height="1" width="1" x="8" y="22"></rect>
+            <rect height="1" width="3" x="11" y="22"></rect>
+            <rect height="1" width="2" x="16" y="22"></rect>
+            <rect height="1" width="2" x="22" y="22"></rect>
+            <rect height="1" width="1" x="26" y="22"></rect>
+            <rect height="1" width="2" x="9" y="24"></rect>
+            <rect height="1" width="1" x="13" y="24"></rect>
+            <rect height="1" width="1" x="17" y="24"></rect>
+            <rect height="1" width="3" x="20" y="24"></rect>
+            <rect height="1" width="2" x="25" y="24"></rect>
+            <rect height="1" width="3" x="8" y="26"></rect>
+            <rect height="1" width="2" x="12" y="26"></rect>
+            <rect height="1" width="1" x="15" y="26"></rect>
+            <rect height="1" width="2" x="18" y="26"></rect>
+            <rect height="1" width="3" x="22" y="26"></rect>
+          </svg>
+        </div>
+
+        <span id="receipt-session-code" class="font-mono-code text-[11px] text-on-surface-variant uppercase tracking-wider mt-3">CNTR-8821-DELHI-T19</span>
+
+        <!-- Subtle Metadata Details Line (NO green dot, strictly formal badge) -->
+        <div class="w-full flex flex-col gap-3 mt-7 pt-6 border-t border-surface-container-highest font-body-md text-[13px]">
+          <div class="flex items-center justify-between">
+            <span class="text-on-surface-variant">Station Seat</span>
+            <span id="receipt-seat-val" class="font-mono-code text-[12px] text-primary font-semibold">LAB-04 // STN-19</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-on-surface-variant">Integrity Status</span>
+            <span class="badge-intact font-mono-code">[CHAIN INTACT]</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-on-surface-variant">Cosignatures</span>
+            <span id="receipt-cosig-val" class="font-mono-code text-[12px] text-primary font-semibold">14 of 14</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-on-surface-variant">Witness</span>
+            <span id="receipt-witness-val" class="font-headline text-[14px] text-primary">Examiner #02 (Delhi Vault)</span>
+          </div>
+        </div>
+
+        <!-- Minimal Stamp Seal -->
+        <div class="mt-7 flex items-center justify-center">
+          <div class="badge-brass">
+            <span class="material-symbols-outlined text-[13px]">verified</span>
+            <span>Countersigned & Locked</span>
+          </div>
+        </div>
+
+        <!-- Accessible Raw Digest -->
+        <textarea id="digest-raw" class="hidden" readonly aria-label="Plain text cryptographic voucher digest">CNTR::SESSION:8821::STN:19::TS:1729769414::EVENTS:212::WITNESS:EX02::SIG:8f3ac99241b0d77e102cb891b972e3a1f49c00de4a3194be::CHAIN:VERIFIED</textarea>
+
+        <!-- Subtle Footnote (strictly no italics) -->
+        <div class="mt-7 text-center max-w-sm">
+          <p id="txt-receipt-footnote" class="font-headline text-[12px] text-on-surface-variant leading-relaxed">
+            Keep this receipt safe. It allows independent archival verification against the ledger root.
+          </p>
+        </div>
+      </div>
+
+      <!-- Action Deck -->
+      <div class="grid grid-cols-2 gap-4 mt-1 no-print">
+        <button id="copy-btn" type="button" class="min-h-[46px] px-4 bg-transparent border border-outline-variant hover:border-primary text-primary bg-surface transition-colors font-body-md text-[13px] font-medium flex items-center justify-center gap-2 rounded-sm">
+          <span class="material-symbols-outlined text-[18px]">content_copy</span>
+          <span id="copy-text">Copy Slip</span>
+        </button>
+        <button id="print-btn" type="button" class="min-h-[46px] px-4 bg-primary text-on-primary hover:bg-tertiary transition-colors font-body-md text-[13px] font-medium flex items-center justify-center gap-2 rounded-sm">
+          <span class="material-symbols-outlined text-[18px]">print</span>
+          <span>Print Folio Slip</span>
+        </button>
+      </div>
+    </section>
+
+
+    <!-- ============================================================ -->
+    <!-- VIEW 4: ASSESSOR AUDIT & VERIFIER CONSOLE                    -->
+    <!-- ============================================================ -->
+    <section id="view-assessor" class="hidden w-full max-w-6xl mx-auto px-4 py-4 flex flex-col gap-6">
+      <div class="flex items-center justify-between pb-3 border-b border-surface-container-highest">
+        <div>
+          <span class="font-mono-code text-[10px] uppercase text-secondary font-bold">OFFICIAL VERIFICATION</span>
+          <h1 class="font-headline text-[24px] text-primary font-medium mt-0.5">Assessor Evidence Console</h1>
+        </div>
+        <button onclick="loadAssessorCase()" class="px-3.5 py-1.5 font-mono-code text-[11px] font-semibold bg-primary text-surface hover:bg-tertiary rounded-sm transition-colors flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[15px]">refresh</span>
+          <span>Re-verify Store</span>
+        </button>
+      </div>
+
+      <div id="assessor-content-area" class="flex flex-col gap-6">
+        <!-- Dynamically rendered via loadAssessorCase() -->
+      </div>
+    </section>
+
+
+    <!-- ============================================================ -->
+    <!-- VIEW 5: TAMPER LAB WORKBENCH (37 SCENARIOS)                  -->
+    <!-- ============================================================ -->
+    <section id="view-tamperlab" class="hidden w-full max-w-6xl mx-auto px-4 py-4 flex flex-col gap-6">
+      <div class="flex items-center justify-between pb-3 border-b border-surface-container-highest">
+        <div>
+          <span class="font-mono-code text-[10px] uppercase text-secondary font-bold">EVIDENTIARY ROBUSTNESS</span>
+          <h1 class="font-headline text-[24px] text-primary font-medium mt-0.5">Tamper Lab Adversarial Suite</h1>
+        </div>
+        <span class="font-mono-code text-[11px] text-on-surface-variant font-semibold">37 SCENARIOS TOTAL</span>
+      </div>
+
+      <p class="font-body-md text-[13px] text-on-surface-variant max-w-3xl leading-relaxed">
+        Test how the verifier responds to honest-but-unlucky conditions (power cuts, RTC failures) versus deliberate attacks (batch deletion, rollbacks, seat swaps, forks, and signature corruption).
+      </p>
+
+      <!-- Live Trial Result Display -->
+      <div id="tamperlab-live-result" class="hidden"></div>
+
+      <!-- Scenarios Table -->
+      <div class="flex flex-col gap-2">
+        <div id="tamperlab-scenarios-list" class="flex flex-col gap-2">
+          <!-- Dynamically populated via loadTamperLab() -->
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ============================================================ -->
+    <!-- VIEW 6: LAN WITNESS TELEMETRY MONITOR                        -->
+    <!-- ============================================================ -->
+    <section id="view-witness" class="hidden w-full max-w-6xl mx-auto px-4 py-4 flex flex-col gap-6">
+      <div class="flex items-center justify-between pb-3 border-b border-surface-container-highest">
+        <div>
+          <span class="font-mono-code text-[10px] uppercase text-secondary font-bold">CO-SIGNER STATE</span>
+          <h1 class="font-headline text-[24px] text-primary font-medium mt-0.5">Laboratory Witness Monitor</h1>
+        </div>
+        <button onclick="loadWitnessReport()" class="px-3.5 py-1.5 font-mono-code text-[11px] font-semibold bg-primary text-surface hover:bg-tertiary rounded-sm transition-colors flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[15px]">refresh</span>
+          <span>Poll Witness</span>
+        </button>
+      </div>
+
+      <div id="witness-content-area" class="flex flex-col gap-6">
+        <!-- Dynamically rendered via loadWitnessReport() -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Global Archival Toast Notification -->
+  <aside id="toast-banner" class="hidden fixed bottom-6 right-6 z-50 p-3.5 bg-primary text-surface border border-surface-container-highest rounded-sm shadow-lg flex items-center gap-3 font-mono-code text-[11px]">
+    <span class="material-symbols-outlined text-[#2F6B4F] text-[18px]">verified</span>
+    <span id="toast-message">Action recorded</span>
+  </aside>
+
+  <script src="app.js"></script>
+</body>
+</html>

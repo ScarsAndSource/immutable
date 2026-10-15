@@ -69,6 +69,22 @@ def test_http_api_endpoints():
                 data = json.loads(r.read())
                 assert data["status"] == "online"
 
+            # GET / (static index.html)
+            with urllib.request.urlopen(f"{base_url}/", timeout=5) as r:
+                assert r.status == 200
+                html = r.read().decode("utf-8")
+                assert "Immutable" in html
+                assert "Before you begin" in html
+
+            # GET /style.css
+            with urllib.request.urlopen(f"{base_url}/style.css", timeout=5) as r:
+                assert r.status == 200
+                assert "font-style: normal" in r.read().decode("utf-8")
+
+            # GET /app.js
+            with urllib.request.urlopen(f"{base_url}/app.js", timeout=5) as r:
+                assert r.status == 200
+
             # GET /api/student/session
             with urllib.request.urlopen(f"{base_url}/api/student/session", timeout=5) as r:
                 assert r.status == 200
