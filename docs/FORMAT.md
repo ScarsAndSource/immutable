@@ -102,5 +102,22 @@ from_head, assessor_sig}`; `to_ws_id` is the event's ws_id and `to_pub` the batc
 signer. A candidate follows the transfer; the old seat is retired and must not have
 events past `from_last_seq`, and its event at that seq must hash to `from_head`.
 
+## 10. Anchors
+File: canonical `{"body": B, "sig": hex | null}`, B = `v, exam_id, session_id, ws_id,
+upto_seq, head, kind, holder, seen_ms`. Meaning: holder saw, by its own clock at
+`seen_ms`, that this seat had an event with hash `head` at position `upto_seq`.
+kinds: `witness` (sig by a roster witness key, domain `cosign`), `assessor` (unsigned;
+made by the assessor's store on live ingest), `receipt` (sig by the seat's bound key,
+domain `receipt`). A consistent anchor pins the whole prefix 0..upto_seq.
+
+## 11. Case file
+`{"body": C, "hash": sha256_hex(canonical(C))}`. C holds spec and verifier versions,
+roster id, clock policy, sorted input ids, rejected input, and per-session reports.
+No generation time and no arrival order appear anywhere. Verdicts: TAMPER_SUSPECTED,
+NO_EVIDENCE, SELF_CONSISTENT_ONLY (A0), ANCHORED (A1 or A2). Findings are SUSPECT or
+NOTE; only SUSPECT can move a verdict. Only chains signed by the key bound to their seat
+count. Everything else is listed under `ignored`.
+
+
 
 

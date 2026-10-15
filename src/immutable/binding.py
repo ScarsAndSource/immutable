@@ -1,25 +1,18 @@
 """binding.py: given the roster and the chains we saw, who really is who?
 
-resolve() builds the seat -> key -> candidate map, applies valid transfers, and
-returns every identity problem as a coded finding. It never decides guilt: a
-duplicate key means "two seats claim one key", which could be imaging, a cloned
-disk or an attacker, and a human reads the case.
+resolve() builds seat -> key -> candidate, applies authentic transfers, and returns
+(bindings, [(observed chain, finding)]). Findings are paired with the chain that
+caused them, so the reconciler can count them against that chain only. A forged
+chain injected next to an honest one therefore cannot change the honest verdict.
 
-Checks:
-  DUPLICATE_KEY      one public key seen on more than one seat (imaging, cloning)
-  UNKNOWN_SEAT       a chain from a ws_id the roster and transfers never mention
-  KEY_NOT_ENROLLED   a chain signed by a key that is not the one bound to its seat
-  TRANSFER_INVALID   forged, misplaced, or unresolvable transfer
-  TRANSFER_MISMATCH  old chain does not end where the assessor said it did
-                     (kept writing after the swap, different head, or not provided)
+Only transfer problems are produced here: TRANSFER_INVALID, TRANSFER_MISMATCH.
+Key-versus-seat checks live in reconcile, where primary and foreign chains are known.
 """
 from __future__ import annotations
 
-from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Mapping
 
-from . import keys
 from .events import Event
 from .findings import Code, Finding
 from .roster import Roster
@@ -36,48 +29,39 @@ class Binding:
 
 @dataclass
 class Observed:
-    """One chain as seen by the reconciler (B6)."""
+    """One (session, seat, key) chain as the reconciler sees it."""
     session_id: str
     ws_id: str
-    signer: str                                   # pub that signed its batches
-    last_seq: int
-    hashes: Mapping[int, str] = field(default_factory=dict)   # seq -> event hash
-    transfer: Event | None = None                 # its TRANSFER event, if it has one
-
-
-def _kid(pub: str) -> str:
-    return keys.key_id(pub)[:12]
+    signer: str
+    last_seq: int                                           # highest seq seen at all
+    hashes: Mapping[int, str] = field(default_factory=dict)  # seq -> hash on the trunk
+    transfer: Event | None = None
 
 
 def resolve(roster: Roster, observed: list[Observed]
-            ) -> tuple[dict[str, Binding], list[Finding]]:
-    out: list[Finding] = []
+            ) -> tuple[dict[str, Binding], list[tuple[Observed, Finding]]]:
+    out: list[tuple[Observed, Finding]] = []
+
+    def emit(o: Observed, f: Finding) -> None:
+        out.append((o, replace(f, session=o.session_id, ws=o.ws_id)))
+
     bindings = {s.ws_id: Binding(s.ws_id, s.pub, s.candidate, "roster") for s in roster.seats}
+    order = sorted(observed, key=lambda x: (x.session_id, x.ws_id, x.signer))
 
-    # 1. the same key on two seats (roster keys are already unique; chains may not be)
-    seen: dict[str, set[str]] = defaultdict(set)
-    for s in roster.seats:
-        seen[s.pub].add(s.ws_id)
-    for o in observed:
-        seen[o.signer].add(o.ws_id)
-    for pub, wss in sorted(seen.items()):
-        if len(wss) > 1:
-            out.append(Finding(Code.DUPLICATE_KEY, None,
-                               f"key {_kid(pub)} appears on seats {sorted(wss)}"))
-
-    # 2. transfers: authentic first, then applied in dependency order
-    pending: list[tuple[Observed, Event]] = []
-    for o in sorted((x for x in observed if x.transfer is not None),
-                    key=lambda x: (x.ws_id, x.session_id)):
+    authentic: list[tuple[Observed, Event]] = []
+    for o in order:
         ev = o.transfer
+        if ev is None:
+            continue
         bad = check_event(ev, o.signer, roster.assessor)
         if ev.exam_id != roster.exam_id:
             bad.append(Finding(Code.TRANSFER_INVALID, ev.seq, "transfer is for another exam"))
-        if bad:
-            out.extend(bad)
-        else:
-            pending.append((o, ev))
+        for f in bad:
+            emit(o, f)
+        if not bad:
+            authentic.append((o, ev))
 
+    pending = list(authentic)
     progress = True
     while pending and progress:
         progress = False
@@ -90,50 +74,40 @@ def resolve(roster: Roster, observed: list[Observed]
             progress = True
             existing = bindings.get(ev.ws_id)
             if existing is not None and existing.pub != o.signer:
-                out.append(Finding(Code.TRANSFER_INVALID, ev.seq,
-                                   f"seat {ev.ws_id} is enrolled with a different key"))
+                emit(o, Finding(Code.TRANSFER_INVALID, ev.seq,
+                                f"seat {ev.ws_id} is enrolled with a different key"))
                 continue
             bindings[ev.ws_id] = Binding(ev.ws_id, o.signer, frm.candidate, "transfer")
             bindings[frm.ws_id] = Binding(frm.ws_id, frm.pub, None, "retired")
     for o, ev in pending:
-        out.append(Finding(Code.TRANSFER_INVALID, ev.seq,
-                           f"transfer comes from seat {ev.data['from_ws_id']}, "
-                           "which is not bound to anyone at that point"))
+        emit(o, Finding(Code.TRANSFER_INVALID, ev.seq,
+                        f"transfer comes from seat {ev.data['from_ws_id']}, which is not "
+                        "bound to anyone at that point"))
 
-    # 3. the old chain must stop exactly where the assessor said
-    chains = {(o.session_id, o.ws_id): o for o in observed}
-    for o in observed:
-        ev = o.transfer
-        if ev is None:
-            continue
+    by_chain: dict[tuple[str, str], list[Observed]] = {}
+    for o in order:
+        by_chain.setdefault((o.session_id, o.ws_id), []).append(o)
+
+    def chain(sid: str, ws: str) -> Observed | None:
+        lst = by_chain.get((sid, ws), [])
+        b = bindings.get(ws)
+        return next((o for o in lst if b and b.pub == o.signer), lst[0] if lst else None)
+
+    for o, ev in authentic:
         n, head = ev.data["from_last_seq"], ev.data["from_head"]
-        old = chains.get((o.session_id, ev.data["from_ws_id"]))
+        old = chain(o.session_id, ev.data["from_ws_id"])
+        ws = ev.data["from_ws_id"]
         if old is None:
-            out.append(Finding(Code.TRANSFER_MISMATCH, ev.seq,
-                               f"no log was provided for the old seat {ev.data['from_ws_id']}"))
+            emit(o, Finding(Code.TRANSFER_MISMATCH, ev.seq, f"no log was provided for the old seat {ws}"))
         elif old.last_seq > n:
-            out.append(Finding(Code.TRANSFER_MISMATCH, ev.seq,
-                               f"old seat {old.ws_id} kept writing after the transfer "
-                               f"(events {n + 1}..{old.last_seq})"))
+            emit(o, Finding(Code.TRANSFER_MISMATCH, ev.seq,
+                            f"old seat {ws} kept writing after the transfer (events {n + 1} to {old.last_seq})"))
         elif old.last_seq < n:
-            out.append(Finding(Code.TRANSFER_MISMATCH, ev.seq,
-                               f"old seat {old.ws_id} log ends at {old.last_seq} but the "
-                               f"assessor recorded {n}: its tail is missing"))
+            emit(o, Finding(Code.TRANSFER_MISMATCH, ev.seq,
+                            f"old seat {ws} log ends at {old.last_seq} but the assessor recorded {n}; its tail is missing"))
         elif old.hashes.get(n) != head:
-            out.append(Finding(Code.TRANSFER_MISMATCH, ev.seq,
-                               f"old seat {old.ws_id} has a different event at {n} "
-                               "than the one the assessor recorded"))
-
-    # 4. every chain must be signed by the key its seat is bound to
-    for o in observed:
-        b = bindings.get(o.ws_id)
-        if b is None:
-            out.append(Finding(Code.UNKNOWN_SEAT, None,
-                               f"seat {o.ws_id} is not on the roster or in any transfer"))
-        elif b.pub != o.signer:
-            out.append(Finding(Code.KEY_NOT_ENROLLED, None,
-                               f"seat {o.ws_id} was signed by key {_kid(o.signer)}, "
-                               f"not its enrolled key {_kid(b.pub)}"))
+            emit(o, Finding(Code.TRANSFER_MISMATCH, ev.seq,
+                            f"old seat {ws} has no event matching what the assessor recorded at {n}"))
     return bindings, out
 
 

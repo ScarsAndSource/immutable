@@ -63,3 +63,23 @@ surveillance.
 
 ## TODO
 Map the seven failure tests named in the PS onto T-rows when B7 starts.
+
+## Detection map (finding codes that answer each threat)
+| Threat | Finding codes |
+|--------|---------------|
+| T1 edit in place | BATCH_DEFECT, LINK_BREAK, CHECKPOINT_BAD, ANCHOR_CONFLICT |
+| T2 delete middle | MISSING_RANGE, LINK_BREAK |
+| T3 truncate tail | TRUNCATED, ROLLBACK (only up to the last anchor; beyond it: UNANCHORED_TAIL statement) |
+| T4 forge from scratch | ANCHOR_CONFLICT, TRUNCATED. With no anchor: NO_ANCHOR statement, never a green tick |
+| T5 replay / T10 hostile input | MALFORMED, BAD_SIGNATURE, WRONG_EXAM, FOREIGN_BATCH (all NOTE, cannot frame anyone) |
+| T6 fork | FORK |
+| T7 / T16 cloned key | DUPLICATE_KEY, KEY_NOT_ENROLLED |
+| T8 clock | CLOCK_BACKWARD, BOOT_REVISIT (SUSPECT); CLOCK_STEP, CLOCK_OFFSET, SILENCE (NOTE) |
+| T12 fsync lied | ROLLBACK or TRUNCATED against an outside holder |
+| T13 wiped WAL | BAD_START or MISSING_RANGE, plus TRUNCATED with an anchor |
+| T14 agent killed | SILENCE, RECOVERED, unanchored tail statement |
+| T15 unfingerprinted files | SUBMISSION_GAP |
+| T17 unauthorised swap | UNKNOWN_SEAT, KEY_NOT_ENROLLED, TRANSFER_INVALID |
+| T18 transfer abuse | TRANSFER_MISMATCH |
+| T19 roster swap | ROSTER_MISMATCH |
+
