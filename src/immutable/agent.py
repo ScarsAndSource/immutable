@@ -129,7 +129,7 @@ class Agent:
         (ev_dir / "outbox").mkdir(parents=True, exist_ok=True, mode=0o700)
         fs = fs or RealFS()
         wal_path = str(ev_dir / "session.wal")
-        ws = Workspace(workspace)
+        ws = workspace if hasattr(workspace, "scan") else Workspace(workspace)
 
         if fs.exists(wal_path):
             rec = Wal.recover(fs, wal_path, exam_id, session_id, ws_id)   # emits RECOVERY
