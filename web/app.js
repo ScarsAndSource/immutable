@@ -240,7 +240,7 @@ async function handleRunCode() {
     term.textContent = `[exit ${res.exit_code} · ${res.duration_ms} ms]\n${res.stdout || ""}${err}`;
     showToast("Run recorded");
   } else {
-    term.textContent = "Run failed. The server is unreachable or running code is disabled.";
+    term.textContent = "";
   }
   refreshSession();
 }
