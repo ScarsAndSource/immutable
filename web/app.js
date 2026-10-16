@@ -594,11 +594,12 @@ function openTeacher() {
   if (!root) return;
   if (!teacherCtl) {
     teacherCtl = window.TeacherBoard.mount(root, {
-      apiPrefix: "/api/teacher",
-      pollMs: 2000,
-      simToggle: true,   // show "Simulated class" toggle in demo mode
+      board: "/api/teacher/board",  // opts.board — the URL teacher.js polls
+      seat: "/api/teacher/seat",    // opts.seat  — used for the per-seat detail fetch
+      simToggle: true,              // show "Simulated class" toggle in demo mode
     });
   }
+  teacherCtl.start();              // begin the poll loop (was never called before)
 }
 
 async function loadMode() {
