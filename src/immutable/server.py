@@ -524,7 +524,8 @@ class WebHandler(BaseHTTPRequestHandler):
             self.send_header("Retry-After", str(retry_after))
         self._security_headers()
         self.end_headers()
-        self.wfile.write(body)
+        if self.command != "HEAD":
+            self.wfile.write(body)
 
     def _guard(self) -> bool:
         verdict = websec.check(self.server.sec, self.command, urlparse(self.path).path, self.headers)
@@ -533,6 +534,17 @@ class WebHandler(BaseHTTPRequestHandler):
         status, msg, retry = verdict
         self._json(status, {"error": msg}, retry)
         return False
+
+    def do_HEAD(self) -> None:
+        if not self._guard():
+            return
+        parsed = urlparse(self.path)
+        path = parsed.path
+        if path in ("/health", "/api/health"):
+            self._json(200, {"status": "ok"})
+            return
+        # Fall back to GET headers logic for static or other endpoints
+        self.do_GET()
 
     def do_OPTIONS(self) -> None:          # no CORS: the page is same-origin
         self._json(405, {"error": "method not allowed"})
@@ -559,6 +571,10 @@ class WebHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
         service: ImmutableService = self.server.service
+
+        if path in ("/health", "/api/health"):
+            self._json(200, {"status": "ok"})
+            return
 
         if path == "/api/status":
             ses = service.get_student_session()
@@ -719,7 +735,8 @@ class WebHandler(BaseHTTPRequestHandler):
         if target.name == "index.html":
             self.send_header("Set-Cookie", websec.session_cookie(self.server.sec.token))
         self.end_headers()
-        self.wfile.write(raw)
+        if self.command != "HEAD":
+            self.wfile.write(raw)
 
 
 class ImmutableWebServer:

@@ -116,5 +116,25 @@ def test_http_api_endpoints():
                 res = json.loads(r.read())
                 assert res["outcome"] == "CLEAN"
 
+            # GET /health
+            req_health = urllib.request.Request(f"{base_url}/health", method="GET")
+            with opener.open(req_health, timeout=5) as r:
+                assert r.status == 200
+                health_data = json.loads(r.read())
+                assert health_data == {"status": "ok"}
+
+            # HEAD /health
+            req_head_health = urllib.request.Request(f"{base_url}/health", method="HEAD")
+            with opener.open(req_head_health, timeout=5) as r:
+                assert r.status == 200
+                assert r.read() == b""
+                assert "application/json" in r.headers.get("Content-Type", "")
+
+            # HEAD / (static)
+            req_head_root = urllib.request.Request(f"{base_url}/", method="HEAD")
+            with opener.open(req_head_root, timeout=5) as r:
+                assert r.status == 200
+                assert r.read() == b""
+
         finally:
             server.shutdown()
